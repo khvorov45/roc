@@ -9,9 +9,13 @@ rule install_deps:
 rule data:
     input:
         ".deps-installed",
-        "data/data.R"
+        "data/data.R",
+        "data-raw/euro-ncp.xlsx",
+        "data-raw/euro-s1.xlsx",
+        "data-raw/svnt.xlsx",
+        "data-raw/wantai.xlsx"
     output:
-
+        "data/data.csv"
     shell:
         "Rscript data/data.R"
 
