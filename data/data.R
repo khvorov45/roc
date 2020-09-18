@@ -109,6 +109,10 @@ all_data_mod <- all_data %>%
       cut(c(-Inf, 8, 14, Inf)) %>%
       recode("(-Inf,8]" = "<=8", "(8,14]" = "9-14", "(14, Inf]" = ">=15")
   ) %>%
+  # Remove old iga for the non-covids since we are not interested in it
+  filter(!(assay == "euro_iga" & !true_covid)) %>%
+  mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%
+  # Remove the unneeded variables
   select(-cohort, -symptom_onset_days)
 
 save_data(all_data_mod, "data")
