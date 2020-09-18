@@ -19,6 +19,24 @@ rule data:
     shell:
         "Rscript data/data.R"
 
+rule roc:
+    input:
+        ".deps-installed",
+        "roc/roc.R",
+        "data/data.csv"
+    output:
+        "roc/euro_iga.png",
+        "roc/euro_igg.png",
+        "roc/euro_ncp.png",
+        "roc/svnt.png",
+        "roc/wantai_igm.png",
+        "roc/wantai_tot.png",
+        "roc/assay-comp.png",
+        "roc/roc.csv"
+    shell:
+        "Rscript roc/roc.R"
+
 rule all:
     input:
-        rules.data.output
+        rules.data.output,
+        rules.roc.output
