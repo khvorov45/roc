@@ -82,4 +82,33 @@ all_data %>%
 # is much smaller than the total number of unique individuals, I'll ignore this
 # and pretend that all observations are independent.
 
+# Modify variables
+unique(all_data$cohort)
+unique(all_data$symptom_onset_days)
+unique(all_data$assay)
+
+all_data %>%
+  mutate(
+    true_covid = str_detect(tolower(cohort), "pcr pos"),
+    # Categorise onset to <=8, 9-14, >=15
+    symptom_onset_cat = suppressWarnings(as.integer(
+      # How hard is it code a goddamn integer duration consistently jesus christ
+      recode(
+        symptom_onset_days,
+        # Look at this beautiful inconsistent spacing - almost all possible
+        # variations!
+        "A= 0 to 3" = "1",
+        "B= 4 to 8" = "6",
+        "C=9 to 14" = "12",
+        "D = 15 to 20" = "18",
+        "E= 21 to 30" = "25"
+      ) %>%
+        str_replace("[>|+]", "") %>%
+        str_replace("More than ", "")
+    )) %>%
+      cut(c(-Inf, 8, 14, Inf)) %>%
+      recode("(-Inf,8]" = "<=8", "(8,14]" = "9-14", "(14, Inf]" = ">=15")
+  ) %>%
+  select(-cohort, -symptom_onset_days)
+
 save_data(all_data, "data")
