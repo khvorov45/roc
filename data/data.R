@@ -87,7 +87,7 @@ unique(all_data$cohort)
 unique(all_data$symptom_onset_days)
 unique(all_data$assay)
 
-all_data %>%
+all_data_mod <- all_data %>%
   mutate(
     true_covid = str_detect(tolower(cohort), "pcr pos"),
     # Categorise onset to <=8, 9-14, >=15
@@ -111,4 +111,4 @@ all_data %>%
   ) %>%
   select(-cohort, -symptom_onset_days)
 
-save_data(all_data, "data")
+save_data(all_data_mod, "data")
