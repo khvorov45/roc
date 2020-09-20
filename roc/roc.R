@@ -114,18 +114,32 @@ calc_both_one_threshold <- function(min_euro,
     )
 }
 
-plot_calcs <- function(data, name = "") {
+filter_one_onset <- function(onset, thresholds, data) {
+  data %>%
+    filter((true_covid & symptom_onset_cat == onset) | !true_covid) %>%
+    pmap_dfr(thresholds, calc_both_one_threshold, .) %>%
+    mutate(onset = onset)
+}
+
+plot_calcs <- function(data, assay = "") {
   plot <- data %>%
-    ggplot(aes(threshold, point)) +
+    mutate(color = if_else(
+      (startsWith(assay, "euro") & threshold == 0.8)
+      | (startsWith(assay, "wantai") & threshold == 0.9)
+      | (assay == "svnt" & threshold == 20), "red", "black",
+    )) %>%
+    ggplot(aes(threshold, point, col = color)) +
     ggdark::dark_theme_bw(verbose = FALSE) +
     theme(
-      strip.background = element_blank()
+      strip.background = element_blank(),
+      panel.spacing.y = unit(0, "null")
     ) +
-    facet_wrap(~char, scales = "free") +
+    facet_grid(onset ~ char, scales = "free_x") +
     scale_x_continuous("Threshold") +
     scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
+    scale_color_identity() +
     geom_pointrange(aes(ymin = low, ymax = high))
-  attr(plot, "name") <- name
+  attr(plot, "assay") <- assay
   plot
 }
 
@@ -154,17 +168,23 @@ thresholds <- tibble(
   min_svnt = seq(18, 28, length.out = n_to_test)
 )
 
-roc <- pmap_dfr(thresholds, calc_both_one_threshold, data)
+onsets <- na.omit(unique(data$symptom_onset_cat))
 
-save_data(roc, "roc")
+indiv_onsets <- map_dfr(onsets, filter_one_onset, thresholds, data)
+any_onset <- pmap_dfr(thresholds, calc_both_one_threshold, data)
 
-plots <- roc %>%
+all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
+  mutate(onset = factor(onset, levels = c("<=8", "9-14", ">=15", "Any")))
+
+save_data(all_results, "roc")
+
+plots <- all_results %>%
   group_by(assay) %>%
-  group_map(~ plot_calcs(.x, .y$assay))
+  group_map(~ plot_calcs(.x, paste(.y$assay)))
 
-walk(plots, ~ save_plot(.x, attr(.x, "name"), width = 15, height = 15))
+walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 20))
 
-assay_comp_plot <- roc %>%
+assay_comp_plot <- all_results %>%
   filter(
     (startsWith(assay, "euro") & threshold == 0.8)
     | (startsWith(assay, "wantai") & threshold == 0.9)
@@ -174,11 +194,12 @@ assay_comp_plot <- roc %>%
   ggdark::dark_theme_bw(verbose = FALSE) +
   theme(
     strip.background = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1)
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    panel.spacing.y = unit(0, "null")
   ) +
-  facet_wrap(~char, scales = "free_y") +
+  facet_grid(onset ~ char, scales = "free_y") +
   scale_x_discrete("Assay at standard threshold") +
   scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
   geom_pointrange(aes(ymin = low, ymax = high))
 
-save_plot(assay_comp_plot, "assay-comp", width = 15, height = 15)
+save_plot(assay_comp_plot, "assay-comp", width = 20, height = 20)
