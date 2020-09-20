@@ -132,10 +132,12 @@ plot_calcs <- function(data, assay = "") {
     ggdark::dark_theme_bw(verbose = FALSE) +
     theme(
       strip.background = element_blank(),
-      panel.spacing.y = unit(0, "null")
+      panel.spacing = unit(0, "null"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.minor.x = element_blank()
     ) +
-    facet_grid(onset ~ char, scales = "free_x") +
-    scale_x_continuous("Threshold") +
+    facet_grid(onset ~ char) +
+    scale_x_continuous("Threshold", breaks = unique(data$threshold)) +
     scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
     scale_color_identity() +
     geom_pointrange(aes(ymin = low, ymax = high))
