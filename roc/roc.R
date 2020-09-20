@@ -172,10 +172,10 @@ assay_comp_plot <- roc %>%
   ) %>%
   ggplot(aes(assay, point)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
-    theme(
-      strip.background = element_blank(),
-      axis.text.x = element_text(angle = 30, hjust = 1)
-    ) +
+  theme(
+    strip.background = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  ) +
   facet_wrap(~char, scales = "free_y") +
   scale_x_discrete("Assay at standard threshold") +
   scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
