@@ -27,7 +27,12 @@ boxplots <- data %>%
     min_threshold = case_when(
       startsWith(assay, "euro") ~ 0.8,
       startsWith(assay, "wantai") ~ 0.9,
-      assay == "svnt" ~ 0.2,
+      assay == "svnt" ~ 20,
+    ),
+    max_threshold = case_when(
+      startsWith(assay, "euro") ~ 1.1,
+      startsWith(assay, "wantai") ~ 1.1,
+      assay == "svnt" ~ 21, # Need to make it visible
     )
   ) %>%
   ggplot(aes(symptom_onset_cat, measurement)) +
@@ -36,7 +41,7 @@ boxplots <- data %>%
   theme(
     strip.background = element_blank()
   ) +
-  scale_x_discrete("Symptom onset") +
+  scale_x_discrete("Symptom onset", expand = expansion(0)) +
   scale_y_continuous("Measure") +
   geom_jitter(
     alpha = 0.4,
@@ -49,6 +54,9 @@ boxplots <- data %>%
     outlier.color = NA,
     outlier.fill = NA
   ) +
-  geom_rect(aes(xmin = 0, xmax = 100, ymin = 1, ymax = 5))
+  geom_rect(
+    aes(xmin = 0.5, xmax = 4.5, ymin = min_threshold, ymax = max_threshold),
+    alpha = 0.01
+  )
 
 save_plot(boxplots, "boxplots", width = 20, height = 15)
