@@ -64,6 +64,8 @@ count_true_outcome <- function(data) {
 calc_prop_ci <- function(success, total) {
   res <- PropCIs::exactci(success, total, 0.95)
   tibble(
+    success = success,
+    total = total,
     low = res$conf.int[[1]],
     point = success / total,
     high = res$conf.int[[2]]
@@ -185,18 +187,23 @@ all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
 
 save_data(all_results, "roc")
 
+# Plot all results
 plots <- all_results %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
 
 walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 20))
 
-assay_comp_plot <- all_results %>%
+# Filter down to the standard thresholds
+std_threshold_results <- all_results %>%
   filter(
     (startsWith(assay, "euro") & threshold == 0.8)
     | (startsWith(assay, "wantai") & threshold == 0.9)
     | (assay == "svnt" & threshold == 20)
-  ) %>%
+  )
+
+# Plot assay comparison
+assay_comp_plot <- std_threshold_results %>%
   ggplot(aes(assay, point)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
   theme(
@@ -210,3 +217,20 @@ assay_comp_plot <- all_results %>%
   geom_pointrange(aes(ymin = low, ymax = high))
 
 save_plot(assay_comp_plot, "assay-comp", width = 20, height = 20)
+
+# Table of results at standard thresholds
+
+f <- scales::percent_format(0.1)
+std_threshold_table <- std_threshold_results %>%
+  mutate(
+    summary = glue::glue(
+      "{f(point)} [{f(low)} - {f(high)}] ({success} / {total})"
+    )
+  ) %>%
+  select(-success, -total, -low, -point, -high, -threshold) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  select(
+    onset, char, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
+  )
+
+save_data(std_threshold_table, "assay-comp")

@@ -42,7 +42,8 @@ rule roc:
         "roc/wantai_igm.png",
         "roc/wantai_tot.png",
         "roc/assay-comp.png",
-        "roc/roc.csv"
+        "roc/roc.csv",
+        "roc/assay-comp.csv"
     shell:
         "Rscript roc/roc.R"
 
