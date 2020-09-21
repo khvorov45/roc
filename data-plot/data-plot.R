@@ -23,6 +23,13 @@ data <- read_data("data")
 
 boxplots <- data %>%
   filter(!is.na(symptom_onset_cat), abs(measurement) < 100) %>%
+  mutate(
+    min_threshold = case_when(
+      startsWith(assay, "euro") ~ 0.8,
+      startsWith(assay, "wantai") ~ 0.9,
+      assay == "svnt" ~ 0.2,
+    )
+  ) %>%
   ggplot(aes(symptom_onset_cat, measurement)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
   facet_wrap(~assay, scales = "free_y") +
@@ -41,6 +48,7 @@ boxplots <- data %>%
     fill = NA,
     outlier.color = NA,
     outlier.fill = NA
-  )
+  ) +
+  geom_rect(aes(xmin = 0, xmax = 100, ymin = 1, ymax = 5))
 
 save_plot(boxplots, "boxplots", width = 20, height = 15)
