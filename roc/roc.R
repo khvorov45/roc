@@ -171,6 +171,7 @@ thresholds <- tibble(
 )
 
 onsets <- na.omit(unique(data$symptom_onset_cat))
+onsets <- onsets[onsets != "no infection"]
 
 indiv_onsets <- map_dfr(onsets, filter_one_onset, thresholds, data)
 any_onset <- pmap_dfr(thresholds, calc_both_one_threshold, data)

@@ -19,6 +19,16 @@ rule data:
     shell:
         "Rscript data/data.R"
 
+rule data_plot:
+    input:
+        ".deps-installed",
+        "data-plot/data-plot.R",
+        "data/data.csv",
+    output:
+        "data-plot/boxplots.png"
+    shell:
+        "Rscript data-plot/data-plot.R"
+
 rule roc:
     input:
         ".deps-installed",
@@ -39,4 +49,5 @@ rule roc:
 rule all:
     input:
         rules.data.output,
+        rules.data_plot.output,
         rules.roc.output

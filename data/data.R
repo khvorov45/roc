@@ -107,7 +107,9 @@ all_data_mod <- all_data %>%
         str_replace("More than ", "")
     )) %>%
       cut(c(-Inf, 8, 14, Inf)) %>%
-      recode("(-Inf,8]" = "<=8", "(8,14]" = "9-14", "(14, Inf]" = ">=15")
+      as.character() %>%
+      recode("(-Inf,8]" = "<=8", "(8,14]" = "9-14", "(14, Inf]" = ">=15"),
+    symptom_onset_cat = if_else(true_covid, symptom_onset_cat, "no infection")
   ) %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & !true_covid)) %>%
