@@ -9,28 +9,32 @@ roc_dir <- "roc"
 
 source(file.path(data_dir, "read_data.R"))
 
-determine_result <- function(negative, positive) {
-  function(measurement) {
+determine_result <- function(measurement, threshold, equivocal_range = 0) {
+  if (equivocal_range > 0) {
     case_when(
-      measurement < negative ~ "neg",
-      measurement <= positive ~ "eqiv",
-      measurement > positive ~ "pos"
+      measurement < threshold ~ "neg",
+      measurement <= threshold + equivocal_range ~ "eqiv",
+      measurement > threshold + equivocal_range ~ "pos"
+    )
+  } else {
+    if_else(
+      measurement < threshold, "neg", "pos"
     )
   }
 }
 
 calc_result_one_threshold <- function(data,
-                                      min_euro = 0.8,
-                                      min_wantai = 0.9,
-                                      min_svnt = 0.2) {
+                                      euro = 0.8,
+                                      wantai = 0.9,
+                                      svnt = 0.2) {
   data %>%
     mutate(
       result = case_when(
         startsWith(assay, "euro") ~
-        determine_result(min_euro, min_euro + 0.3)(measurement),
+        determine_result(measurement, euro),
         startsWith(assay, "wantai") ~
-        determine_result(min_wantai, min_wantai + 0.2)(measurement),
-        assay == "svnt" ~ determine_result(min_svnt, min_svnt)(measurement),
+        determine_result(measurement, wantai),
+        assay == "svnt" ~ determine_result(measurement, svnt),
       )
     )
 }
