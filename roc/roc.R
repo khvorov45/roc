@@ -85,16 +85,22 @@ calc_test_char <- function(data) {
 
 calc_pred_vals <- function(data) {
   data <- count_true_outcome(data)
-  ppv <- data %>%
-    summarise(
-      calc_prop_ci(positive[result == "pos"], total[result == "pos"])
-    ) %>%
-    mutate(char = "PPV")
-  npv <- data %>%
-    summarise(
-      calc_prop_ci(negative[result == "neg"], total[result == "neg"])
-    ) %>%
-    mutate(char = "NPV")
+  ppv <- tibble()
+  if ("pos" %in% data$result) {
+    ppv <- data %>%
+      summarise(
+        calc_prop_ci(positive[result == "pos"], total[result == "pos"])
+      ) %>%
+      mutate(char = "PPV")
+  }
+  npv <- tibble()
+  if ("neg" %in% data$result) {
+    npv <- data %>%
+      summarise(
+        calc_prop_ci(negative[result == "neg"], total[result == "neg"])
+      ) %>%
+      mutate(char = "NPV")
+  }
   bind_rows(ppv, npv)
 }
 
@@ -128,12 +134,13 @@ filter_one_onset <- function(onset, thresholds, data) {
 }
 
 plot_calcs <- function(data, assay = "") {
-  plot <- data %>%
+  data_mod <- data %>%
     mutate(color = if_else(
       (startsWith(assay, "euro") & threshold == 0.8)
       | (startsWith(assay, "wantai") & threshold == 0.9)
       | (assay == "svnt" & threshold == 20), "red", "black",
-    )) %>%
+    ))
+  plot <- data_mod %>%
     ggplot(aes(threshold, point, col = color)) +
     ggdark::dark_theme_bw(verbose = FALSE) +
     theme(
@@ -143,7 +150,11 @@ plot_calcs <- function(data, assay = "") {
       panel.grid.minor.x = element_blank()
     ) +
     facet_grid(onset ~ char) +
-    scale_x_continuous("Threshold", breaks = unique(data$threshold)) +
+    scale_x_continuous(
+      "Threshold",
+      breaks = unique(data_mod$threshold[data_mod$color != "red"]),
+      labels = scales::number_format(0.01)
+    ) +
     scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
     scale_color_identity() +
     geom_pointrange(aes(ymin = low, ymax = high))
@@ -168,12 +179,12 @@ save_data <- function(data, name) {
 
 data <- read_data("data")
 
-n_to_test <- 11
+n_to_test <- 10
 
 thresholds <- tibble(
-  min_euro = seq(0.5, 1.5, length.out = n_to_test),
-  min_wantai = seq(0.5, 1.5, length.out = n_to_test),
-  min_svnt = seq(18, 28, length.out = n_to_test)
+  min_euro = c(seq(0.5, 8, length.out = n_to_test), 0.8),
+  min_wantai = c(seq(0.5, 7, length.out = n_to_test), 0.9),
+  min_svnt = c(seq(18, 50, length.out = n_to_test), 20)
 )
 
 onsets <- na.omit(unique(data$symptom_onset_cat))
