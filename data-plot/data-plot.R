@@ -22,7 +22,7 @@ save_plot <- function(plot, name, ...) {
 data <- read_data("data")
 
 boxplots <- data %>%
-  filter(!is.na(symptom_onset_cat), abs(measurement) < 100) %>%
+  filter(!is.na(symptom_onset_cat)) %>%
   mutate(
     min_threshold = case_when(
       startsWith(assay, "euro") ~ 0.8,
