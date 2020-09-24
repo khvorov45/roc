@@ -88,33 +88,51 @@ unique(all_data$symptom_onset_days)
 unique(all_data$assay)
 
 all_data_mod <- all_data %>%
-  mutate(
-    true_covid = str_detect(tolower(cohort), "pcr pos"),
-    # Categorise onset to <=8, 9-14, >=15
-    symptom_onset_cat = suppressWarnings(as.integer(
-      # How hard is it code a goddamn integer duration consistently jesus christ
-      recode(
-        symptom_onset_days,
-        # Look at this beautiful inconsistent spacing - almost all possible
-        # variations!
-        "A= 0 to 3" = "1",
-        "B= 4 to 8" = "6",
-        "C=9 to 14" = "12",
-        "D = 15 to 20" = "18",
-        "E= 21 to 30" = "25"
-      ) %>%
-        str_replace("[>|+]", "") %>%
-        str_replace("More than ", "")
-    )) %>%
-      cut(c(-Inf, 8, 14, Inf)) %>%
-      as.character() %>%
-      recode("(-Inf,8]" = "<=8", "(8,14]" = "9-14", "(14, Inf]" = ">=15"),
-    symptom_onset_cat = if_else(true_covid, symptom_onset_cat, "no infection")
-  ) %>%
+  mutate(true_covid = str_detect(tolower(cohort), "pcr pos")) %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & !true_covid)) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%
   # Remove the unneeded variables
-  select(-cohort, -symptom_onset_days)
+  select(-cohort)
 
-save_data(all_data_mod, "data")
+# Replace onset days for some covids with the newly provided
+onset <- read_raw("onset") %>%
+  select(id, symptom_onset_days = `Serum Days since Sx onset`) %>%
+  mutate(
+    symptom_onset_days = if_else(
+      symptom_onset_days == "pending",
+      35L,
+      suppressWarnings(as.integer(symptom_onset_days))
+    )
+  ) %>%
+  filter(!is.na(symptom_onset_days))
+
+new_onset <- inner_join(onset, select(all_data_mod, -symptom_onset_days), "id")
+old_onset <- all_data_mod %>% filter(!id %in% new_onset$id)
+
+# Gotta fix the old onset
+unique(old_onset$symptom_onset_days)
+
+old_onset_fixed <- old_onset %>%
+  mutate(
+    symptom_onset_days = suppressWarnings(symptom_onset_days %>%
+      str_replace("[+|>]", "") %>%
+      as.integer(.))
+  )
+
+all_data_new_onset <- bind_rows(new_onset, old_onset_fixed)
+
+# Create onset categories
+all_data_onset_cats <- all_data_new_onset %>%
+  mutate(
+    symptom_onset_cat = case_when(
+      symptom_onset_days < 7 ~ "<7",
+      symptom_onset_days <= 14 ~ "7-14",
+      symptom_onset_days > 14 ~ ">14",
+      !true_covid ~ "no infection",
+      is.na(symptom_onset_days) ~ NA_character_
+    )
+  ) %>%
+  select(-symptom_onset_days)
+
+save_data(all_data_onset_cats, "data")

@@ -13,7 +13,8 @@ rule data:
         "data-raw/euro-ncp.xlsx",
         "data-raw/euro-s1.xlsx",
         "data-raw/svnt.xlsx",
-        "data-raw/wantai.xlsx"
+        "data-raw/wantai.xlsx",
+        "data-raw/onset.xlsx"
     output:
         "data/data.csv"
     shell:
