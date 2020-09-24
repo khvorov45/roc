@@ -1,6 +1,9 @@
 cat("investigate test characteristics")
 
 library(tidyverse)
+library(furrr)
+
+plan(multiprocess)
 
 data_dir <- "data"
 roc_dir <- "roc"
@@ -133,6 +136,58 @@ filter_one_onset <- function(onset, thresholds, data) {
     mutate(onset = onset)
 }
 
+gen_beta_samples <- function(n_samples, success, total) {
+  rbeta(n_samples, success + 1, total - success + 1)
+}
+
+quantile_to_df <- function(samples) {
+  qs <- quantile(samples, c(0.025, 0.5, 0.975))
+  tibble(low = qs[[1]], point = qs[[2]], high = qs[[3]])
+}
+
+calc_pop_pred_vals <- function(results, n_samples = 1e5, prev = 0.1) {
+  sens_samples <- with(
+    results,
+    gen_beta_samples(
+      n_samples, success[char == "Sensitivity"], total[char == "Sensitivity"]
+    )
+  )
+  spec_samples <- with(
+    results,
+    gen_beta_samples(
+      n_samples, success[char == "Specificity"], total[char == "Specificity"]
+    )
+  )
+  disease_and_positive <- sens_samples * prev
+  disease_and_negative <- (1 - sens_samples) * prev
+  healthy_and_positive <- (1 - spec_samples) * (1 - prev)
+  healthy_and_negative <- spec_samples * (1 - prev)
+  ppv_samples <-
+    disease_and_positive / (disease_and_positive + healthy_and_positive)
+  npv_samples <-
+    healthy_and_negative / (healthy_and_negative + disease_and_negative)
+  ppv_est <- quantile_to_df(ppv_samples) %>% mutate(char = "PPV")
+  npv_est <- quantile_to_df(npv_samples) %>% mutate(char = "NPV")
+  bind_rows(ppv_est, npv_est)
+}
+
+one_prevalence <- function(prev, results, n_samples = 1e5) {
+  results %>%
+    group_by(assay, threshold, onset) %>%
+    group_modify(~ calc_pop_pred_vals(.x, n_samples, prev)) %>%
+    mutate(prev = prev)
+}
+
+filter_std_thresholds <- function(all_results,
+                                  euro = 0.8, wantai = 0.9, svnt = 20) {
+  all_results %>%
+    filter(
+      (startsWith(assay, "euro") & threshold == euro)
+      | (startsWith(assay, "wantai") & threshold == wantai)
+      | (assay == "svnt" & threshold == svnt)
+    )
+}
+
 plot_calcs <- function(data, assay = "") {
   data_mod <- data %>%
     mutate(color = if_else(
@@ -160,6 +215,19 @@ plot_calcs <- function(data, assay = "") {
     geom_pointrange(aes(ymin = low, ymax = high))
   attr(plot, "assay") <- assay
   plot
+}
+
+plot_assay_comp <- function(data) {
+  data %>%
+    ggplot(aes(assay, point)) +
+    ggdark::dark_theme_bw(verbose = FALSE) +
+    theme(
+      strip.background = element_blank(),
+      axis.text.x = element_text(angle = 30, hjust = 1),
+      panel.spacing = unit(0, "null")
+    ) +
+    scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
+    geom_pointrange(aes(ymin = low, ymax = high))
 }
 
 save_plot <- function(plot, name, ...) {
@@ -190,13 +258,19 @@ thresholds <- tibble(
 onsets <- na.omit(unique(data$symptom_onset_cat))
 onsets <- onsets[onsets != "no infection"]
 
-indiv_onsets <- map_dfr(onsets, filter_one_onset, thresholds, data)
-any_onset <- pmap_dfr(thresholds, calc_both_one_threshold, data)
+indiv_onsets <- future_map_dfr(onsets, filter_one_onset, thresholds, data)
+any_onset <- future_pmap_dfr(thresholds, calc_both_one_threshold, data)
 
 all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
   mutate(onset = factor(onset, levels = c("<=8", "9-14", ">=15", "Any")))
 
 save_data(all_results, "roc")
+
+# Calculate predictive values at a range of prevalences
+prevs <- c(0.01, 0.05, 0.1, 0.2)
+pop_pred_vals <- future_map_dfr(prevs, one_prevalence, all_results)
+
+save_data(pop_pred_vals, "pred-vals-pop")
 
 # Plot all results
 plots <- all_results %>%
@@ -206,28 +280,25 @@ plots <- all_results %>%
 walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 20))
 
 # Filter down to the standard thresholds
-std_threshold_results <- all_results %>%
-  filter(
-    (startsWith(assay, "euro") & threshold == 0.8)
-    | (startsWith(assay, "wantai") & threshold == 0.9)
-    | (assay == "svnt" & threshold == 20)
-  )
+std_threshold_results <- all_results %>% filter_std_thresholds()
+std_threshold_predvals <- pop_pred_vals %>% filter_std_thresholds()
 
 # Plot assay comparison
 assay_comp_plot <- std_threshold_results %>%
-  ggplot(aes(assay, point)) +
-  ggdark::dark_theme_bw(verbose = FALSE) +
-  theme(
-    strip.background = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1),
-    panel.spacing.y = unit(0, "null")
-  ) +
-  facet_grid(onset ~ char, scales = "free_y") +
-  scale_x_discrete("Assay at standard threshold") +
-  scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
-  geom_pointrange(aes(ymin = low, ymax = high))
+  plot_assay_comp() +
+  xlab("Assay at any threshold") +
+  facet_grid(char ~ onset, scales = "free_y")
 
 save_plot(assay_comp_plot, "assay-comp", width = 20, height = 20)
+
+# Plot assay comparison for predictive values
+assay_comp_predvals <- std_threshold_predvals %>%
+  filter(onset == "Any") %>%
+  plot_assay_comp() +
+  xlab("Assay at any threshold for any onset") +
+  facet_grid(char ~ prev, scales = "free_y")
+
+save_plot(assay_comp_predvals, "assay-comp-predvals", width = 20, height = 15)
 
 # Table of results at standard thresholds
 
