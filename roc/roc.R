@@ -204,7 +204,7 @@ plot_calcs <- function(data, assay = "") {
       axis.text.x = element_text(angle = 45, hjust = 1),
       panel.grid.minor.x = element_blank()
     ) +
-    facet_grid(onset ~ char) +
+    facet_grid(char ~ onset, scales = "free_y") +
     scale_x_continuous(
       "Threshold",
       breaks = unique(data_mod$threshold[data_mod$color != "red"]),
@@ -267,17 +267,18 @@ all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
 save_data(all_results, "roc")
 
 # Calculate predictive values at a range of prevalences
-prevs <- c(0.01, 0.05, 0.1, 0.2)
+prevs <- c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.015)
 pop_pred_vals <- future_map_dfr(prevs, one_prevalence, all_results)
 
 save_data(pop_pred_vals, "pred-vals-pop")
 
 # Plot all results
 plots <- all_results %>%
+  filter(char %in% c("Sensitivity", "Specificity")) %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
 
-walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 20))
+walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 15))
 
 # Filter down to the standard thresholds
 std_threshold_results <- all_results %>% filter_std_thresholds()
@@ -285,18 +286,26 @@ std_threshold_predvals <- pop_pred_vals %>% filter_std_thresholds()
 
 # Plot assay comparison
 assay_comp_plot <- std_threshold_results %>%
+  filter(char %in% c("Sensitivity", "Specificity")) %>%
   plot_assay_comp() +
   xlab("Assay at any threshold") +
   facet_grid(char ~ onset, scales = "free_y")
 
-save_plot(assay_comp_plot, "assay-comp", width = 20, height = 20)
+save_plot(assay_comp_plot, "assay-comp", width = 20, height = 15)
 
 # Plot assay comparison for predictive values
 assay_comp_predvals <- std_threshold_predvals %>%
   filter(onset == "Any") %>%
+  mutate(
+    prev_lab = factor(
+      prev,
+      levels = prevs,
+      labels = glue::glue("Prevalence {prevs * 100}%")
+    )
+  ) %>%
   plot_assay_comp() +
   xlab("Assay at any threshold for any onset") +
-  facet_grid(char ~ prev, scales = "free_y")
+  facet_grid(char ~ prev_lab, scales = "free_y")
 
 save_plot(assay_comp_predvals, "assay-comp-predvals", width = 20, height = 15)
 
