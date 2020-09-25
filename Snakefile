@@ -37,11 +37,17 @@ rule roc:
         "data/data.csv"
     output:
         "roc/euro_iga.png",
+        "roc/euro_iga-predvals.png",
         "roc/euro_igg.png",
+        "roc/euro_igg-predvals.png",
         "roc/euro_ncp.png",
+        "roc/euro_ncp-predvals.png",
         "roc/svnt.png",
+        "roc/svnt-predvals.png",
         "roc/wantai_igm.png",
+        "roc/wantai_igm-predvals.png",
         "roc/wantai_tot.png",
+        "roc/wantai_tot-predvals.png",
         "roc/assay-comp.png",
         "roc/assay-comp-predvals.png",
         "roc/roc.csv",

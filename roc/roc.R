@@ -217,6 +217,28 @@ plot_calcs <- function(data, assay = "") {
   plot
 }
 
+plot_predvals <- function(data, assay = "") {
+  plot <- data %>%
+    ggplot(aes(prev, point)) +
+    ggdark::dark_theme_bw(verbose = FALSE) +
+    theme(
+      strip.background = element_blank(),
+      panel.spacing = unit(0, "null"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.minor.x = element_blank()
+    ) +
+    facet_grid(char ~ onset, scales = "free_y") +
+    scale_x_log10(
+      "Prevalence",
+      breaks = unique(data$prev),
+      labels = scales::percent_format(0.01)
+    ) +
+    scale_y_continuous("Estimate", labels = scales::percent_format(0.1)) +
+    geom_pointrange(aes(ymin = low, ymax = high))
+  attr(plot, "assay") <- assay
+  plot
+}
+
 plot_assay_comp <- function(data) {
   data %>%
     ggplot(aes(assay, point)) +
@@ -278,7 +300,7 @@ plots <- all_results %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
 
-walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 20, height = 15))
+walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 25, height = 15))
 
 # Filter down to the standard thresholds
 std_threshold_results <- all_results %>% filter_std_thresholds()
@@ -308,6 +330,18 @@ assay_comp_predvals <- std_threshold_predvals %>%
   facet_grid(char ~ prev_lab, scales = "free_y")
 
 save_plot(assay_comp_predvals, "assay-comp-predvals", width = 20, height = 15)
+
+# Plot one assay's predvals at different prevalences
+assay_predvals <- std_threshold_predvals %>%
+  group_by(assay) %>%
+  group_map(~ plot_predvals(.x, .y$assay))
+
+walk(
+  assay_predvals,
+  ~ save_plot(.x, paste0(attr(.x, "assay"), "-predvals"),
+    width = 25, height = 15
+  )
+)
 
 # Table of results at standard thresholds
 
