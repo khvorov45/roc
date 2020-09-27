@@ -289,7 +289,7 @@ all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
 save_data(all_results, "roc")
 
 # Calculate predictive values at a range of prevalences
-prevs <- c(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.015)
+prevs <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
 pop_pred_vals <- future_map_dfr(prevs, one_prevalence, all_results)
 
 save_data(pop_pred_vals, "pred-vals-pop")
@@ -329,7 +329,10 @@ assay_comp_predvals <- std_threshold_predvals %>%
   xlab("Assay at any threshold for any onset") +
   facet_grid(char ~ prev_lab, scales = "free_y")
 
-save_plot(assay_comp_predvals, "assay-comp-predvals", width = 20, height = 15)
+save_plot(
+  assay_comp_predvals, "assay-comp-predvals",
+  width = length(prevs) * 5, height = 15
+)
 
 # Plot one assay's predvals at different prevalences
 assay_predvals <- std_threshold_predvals %>%
