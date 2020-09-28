@@ -196,14 +196,13 @@ plot_calcs <- function(data, assay = "") {
     facet_grid(char ~ onset, scales = "free_y") +
     scale_x_continuous(
       "Threshold",
-      breaks = unique(data_mod$threshold[data_mod$color != "red"]),
       labels = scales::number_format(0.01)
     ) +
     scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
     scale_color_identity() +
-    geom_ribbon(aes(ymin = low, ymax = high)) +
-    geom_point(aes(col = color)) +
-    geom_line()
+    geom_ribbon(aes(ymin = low, ymax = high), alpha = 0.4) +
+    geom_line() +
+    geom_point(aes(col = color))
   attr(plot, "assay") <- assay
   plot
 }
@@ -311,7 +310,7 @@ plots <- all_results %>%
   filter(char %in% c("Sensitivity", "Specificity")) %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
-plots[[1]]
+
 walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 25, height = 15))
 
 # Plot all results as a roc curve
