@@ -259,7 +259,7 @@ save_data <- function(data, name) {
 
 data <- read_data("data")
 
-n_to_test <- 11
+n_to_test <- 15
 
 thresholds <- tibble(
   min_euro = c(
@@ -268,8 +268,8 @@ thresholds <- tibble(
     0.8
   ),
   min_wantai = c(
-    seq(0, 0.5, length.out = n_to_test),
-    seq(0.6, 10, length.out = n_to_test),
+    seq(-0.05, 0.1, length.out = n_to_test),
+    seq(0.2, 10, length.out = n_to_test),
     0.9
   ),
   min_svnt = c(
@@ -298,6 +298,16 @@ test_chars_only <- all_results %>%
   group_by(assay, onset) %>%
   arrange(threshold) %>%
   ungroup()
+
+# Calculate ROC AUC
+aucs <- test_chars_only %>%
+  group_by(assay, onset) %>%
+  summarise(
+    roc_auc = DescTools::AUC(c(0, 1 - Specificity, 1), c(0, Sensitivity, 1)),
+    .groups = "drop"
+  )
+
+save_data(aucs, "aucs")
 
 # Calculate predictive values at a range of prevalences
 prevs <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
@@ -368,6 +378,22 @@ assay_comp_plot <- std_threshold_results %>%
   facet_grid(char ~ onset, scales = "free_y")
 
 save_plot(assay_comp_plot, "assay-comp", width = 20, height = 15)
+
+# Plots assay comparision for ROC AUC
+aucs_plot <- aucs %>%
+  ggplot(aes(assay, roc_auc)) +
+  ggdark::dark_theme_bw(verbose = FALSE) +
+  theme(
+    strip.background = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  ) +
+  scale_x_discrete("Assay") +
+  scale_y_continuous("ROC AUC") +
+  facet_wrap(~onset) +
+  geom_hline(yintercept = 0.5, lty = "11") +
+  geom_point()
+
+save_plot(aucs_plot, "aucs", width = 15, height = 15)
 
 # Plot assay comparison for predictive values
 assay_comp_predvals <- std_threshold_predvals %>%

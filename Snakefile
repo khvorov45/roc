@@ -51,7 +51,9 @@ rule roc:
         "roc/assay-comp.png",
         "roc/assay-comp-predvals.png",
         "roc/roc.png",
+        "roc/aucs.png",
         "roc/roc.csv",
+        "roc/aucs.csv",
         "roc/assay-comp.csv",
         "roc/assay-comp-predvals.csv",
         "roc/pred-vals-pop.csv"
