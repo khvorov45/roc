@@ -116,33 +116,46 @@ gen_beta_samples <- function(n_samples, success, total) {
 }
 
 quantile_to_df <- function(samples) {
-  qs <- quantile(samples, c(0.025, 0.5, 0.975))
-  tibble(low = qs[[1]], point = qs[[2]], high = qs[[3]])
+  qs <- quantile(samples, c(0.025, 0.975))
+  tibble(low = qs[[1]], high = qs[[2]])
 }
 
 calc_pop_pred_vals <- function(results, n_samples = 1e5, prev = 0.1) {
+  # Sensitivity
+  sens <- with(results, point[char == "Sensitivity"])
   sens_samples <- with(
     results,
     gen_beta_samples(
       n_samples, success[char == "Sensitivity"], total[char == "Sensitivity"]
     )
   )
+  # Specificity
+  spec <- with(results, point[char == "Specificity"])
   spec_samples <- with(
     results,
     gen_beta_samples(
       n_samples, success[char == "Specificity"], total[char == "Specificity"]
     )
   )
-  disease_and_positive <- sens_samples * prev
-  disease_and_negative <- (1 - sens_samples) * prev
-  healthy_and_positive <- (1 - spec_samples) * (1 - prev)
-  healthy_and_negative <- spec_samples * (1 - prev)
-  ppv_samples <-
-    disease_and_positive / (disease_and_positive + healthy_and_positive)
-  npv_samples <-
-    healthy_and_negative / (healthy_and_negative + disease_and_negative)
-  ppv_est <- quantile_to_df(ppv_samples) %>% mutate(char = "PPV")
-  npv_est <- quantile_to_df(npv_samples) %>% mutate(char = "NPV")
+  # Estimated probabilities
+  disease_and_positive <- sens * prev
+  disease_and_positive_samples <- sens_samples * prev
+  disease_and_negative <- (1 - sens) * prev
+  disease_and_negative_samples <- (1 - sens_samples) * prev
+  healthy_and_positive <- (1 - spec) * (1 - prev)
+  healthy_and_positive_samples <- (1 - spec_samples) * (1 - prev)
+  healthy_and_negative <- spec * (1 - prev)
+  healthy_and_negative_samples <- spec_samples * (1 - prev)
+  # Estimated predicted values
+  ppv <- disease_and_positive / (disease_and_positive + healthy_and_positive)
+  ppv_samples <- disease_and_positive_samples /
+    (disease_and_positive_samples + healthy_and_positive_samples)
+  npv <- healthy_and_negative / (healthy_and_negative + disease_and_negative)
+  npv_samples <- healthy_and_negative_samples /
+    (healthy_and_negative_samples + disease_and_negative_samples)
+  # Combine into a df
+  ppv_est <- quantile_to_df(ppv_samples) %>% mutate(point = ppv, char = "PPV")
+  npv_est <- quantile_to_df(npv_samples) %>% mutate(point = npv, char = "NPV")
   bind_rows(ppv_est, npv_est)
 }
 
