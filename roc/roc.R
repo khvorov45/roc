@@ -363,7 +363,9 @@ std_threshold_table <- std_threshold_results %>%
     onset, char, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
   )
 
-std_threshold_predvals %>%
+save_data(std_threshold_table, "assay-comp")
+
+std_threshold_table_predvals <- std_threshold_predvals %>%
   mutate(
     summary = glue::glue(
       "{f(point)} [{f(low)} - {f(high)}]"
@@ -376,4 +378,4 @@ std_threshold_predvals %>%
     euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
   )
 
-save_data(std_threshold_table, "assay-comp")
+save_data(std_threshold_table_predvals, "assay-comp-predvals")
