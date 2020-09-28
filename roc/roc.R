@@ -86,39 +86,14 @@ calc_test_char <- function(data) {
   bind_rows(sens, spec)
 }
 
-calc_pred_vals <- function(data) {
-  data <- count_true_outcome(data)
-  ppv <- tibble()
-  if ("pos" %in% data$result) {
-    ppv <- data %>%
-      summarise(
-        calc_prop_ci(positive[result == "pos"], total[result == "pos"])
-      ) %>%
-      mutate(char = "PPV")
-  }
-  npv <- tibble()
-  if ("neg" %in% data$result) {
-    npv <- data %>%
-      summarise(
-        calc_prop_ci(negative[result == "neg"], total[result == "neg"])
-      ) %>%
-      mutate(char = "NPV")
-  }
-  bind_rows(ppv, npv)
-}
-
-calc_both <- function(data) {
-  bind_rows(calc_test_char(data), calc_pred_vals(data))
-}
-
-calc_both_one_threshold <- function(min_euro,
-                                    min_wantai,
-                                    min_svnt,
-                                    data) {
+one_threshold <- function(min_euro,
+                          min_wantai,
+                          min_svnt,
+                          data) {
   data %>%
     calc_result_one_threshold(min_euro, min_wantai, min_svnt) %>%
     group_by(assay) %>%
-    group_modify(~ calc_both(.x)) %>%
+    group_modify(~ calc_test_char(.x)) %>%
     ungroup() %>%
     mutate(
       threshold = case_when(
@@ -132,7 +107,7 @@ calc_both_one_threshold <- function(min_euro,
 filter_one_onset <- function(onset, thresholds, data) {
   data %>%
     filter((true_covid & symptom_onset_cat == onset) | !true_covid) %>%
-    pmap_dfr(thresholds, calc_both_one_threshold, .) %>%
+    pmap_dfr(thresholds, one_threshold, .) %>%
     mutate(onset = onset)
 }
 
