@@ -50,8 +50,10 @@ rule roc:
         "roc/wantai_tot-predvals.png",
         "roc/assay-comp.png",
         "roc/assay-comp-predvals.png",
+        "roc/roc.png",
         "roc/roc.csv",
         "roc/assay-comp.csv",
+        "roc/assay-comp-predvals.csv",
         "roc/pred-vals-pop.csv"
     shell:
         "Rscript roc/roc.R"

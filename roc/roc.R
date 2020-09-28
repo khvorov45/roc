@@ -185,7 +185,7 @@ plot_calcs <- function(data, assay = "") {
       | (assay == "svnt" & threshold == 20), "red", "black",
     ))
   plot <- data_mod %>%
-    ggplot(aes(threshold, point, col = color)) +
+    ggplot(aes(threshold, point)) +
     ggdark::dark_theme_bw(verbose = FALSE) +
     theme(
       strip.background = element_blank(),
@@ -201,7 +201,9 @@ plot_calcs <- function(data, assay = "") {
     ) +
     scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
     scale_color_identity() +
-    geom_pointrange(aes(ymin = low, ymax = high))
+    geom_ribbon(aes(ymin = low, ymax = high)) +
+    geom_point(aes(col = color)) +
+    geom_line()
   attr(plot, "assay") <- assay
   plot
 }
@@ -258,12 +260,24 @@ save_data <- function(data, name) {
 
 data <- read_data("data")
 
-n_to_test <- 10
+n_to_test <- 11
 
 thresholds <- tibble(
-  min_euro = c(seq(0.5, 8, length.out = n_to_test), 0.8),
-  min_wantai = c(seq(0.5, 7, length.out = n_to_test), 0.9),
-  min_svnt = c(seq(18, 50, length.out = n_to_test), 20)
+  min_euro = c(
+    seq(0, 0.5, length.out = n_to_test),
+    seq(1, 10, length.out = n_to_test),
+    0.8
+  ),
+  min_wantai = c(
+    seq(0, 0.5, length.out = n_to_test),
+    seq(0.6, 10, length.out = n_to_test),
+    0.9
+  ),
+  min_svnt = c(
+    seq(0, 15, length.out = n_to_test),
+    seq(20, 100, length.out = n_to_test),
+    20
+  )
 )
 
 onsets <- na.omit(unique(data$symptom_onset_cat))
@@ -273,9 +287,18 @@ indiv_onsets <- future_map_dfr(onsets, filter_one_onset, thresholds, data)
 any_onset <- future_pmap_dfr(thresholds, one_threshold, data)
 
 all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
-  mutate(onset = factor(onset, levels = c(levels(onsets), "Any")))
+  mutate(onset = factor(onset, levels = c(levels(onsets), "Any"))) %>%
+  distinct(assay, onset, threshold, char, .keep_all = TRUE)
 
 save_data(all_results, "roc")
+
+# Reshape to only see the test characteristics
+test_chars_only <- all_results %>%
+  select(assay, onset, point, char, threshold) %>%
+  pivot_wider(names_from = "char", values_from = "point") %>%
+  group_by(assay, onset) %>%
+  arrange(threshold) %>%
+  ungroup()
 
 # Calculate predictive values at a range of prevalences
 prevs <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
@@ -288,8 +311,51 @@ plots <- all_results %>%
   filter(char %in% c("Sensitivity", "Specificity")) %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
-
+plots[[1]]
 walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 25, height = 15))
+
+# Plot all results as a roc curve
+test_chars_only_plot_mod <- test_chars_only %>%
+  # Find thresholds to label
+  mutate(
+    label_threshold = (startsWith(assay, "euro") & threshold == 0.8)
+    | (startsWith(assay, "wantai") & threshold == 0.9)
+    | (assay == "svnt" & threshold == 20)
+  ) %>%
+  # Need to add the extremes
+  group_by(assay, onset) %>%
+  group_modify(
+    ~ bind_rows(
+      .x,
+      tribble(
+        ~threshold, ~Sensitivity, ~Specificity,
+        Inf, 0, 1,
+        -Inf, 1, 0
+      )
+    )
+  ) %>%
+  arrange(threshold)
+
+roc_plot <- test_chars_only_plot_mod %>%
+  ggplot(aes(1 - Specificity, Sensitivity)) +
+  ggdark::dark_theme_bw(verbose = FALSE) +
+  theme(
+    strip.background = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  ) +
+  facet_grid(assay ~ onset) +
+  scale_x_continuous(labels = scales::percent_format(1)) +
+  geom_abline(slope = 1, intercept = 0, lty = "11") +
+  geom_path() +
+  geom_point() +
+  geom_point(
+    data = filter(test_chars_only_plot_mod, label_threshold), col = "red"
+  )
+
+save_plot(
+  roc_plot, "roc",
+  width = 15, height = 15
+)
 
 # Filter down to the standard thresholds
 std_threshold_results <- all_results %>% filter_std_thresholds()
