@@ -56,6 +56,7 @@ rule roc:
         "roc/aucs.csv",
         "roc/assay-comp.csv",
         "roc/assay-comp-predvals.csv",
+        "roc/assay-comp-auc.csv",
         "roc/pred-vals-pop.csv"
     shell:
         "Rscript roc/roc.R"

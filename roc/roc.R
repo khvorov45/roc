@@ -293,17 +293,28 @@ save_data(all_results, "roc")
 
 # Reshape to only see the test characteristics
 test_chars_only <- all_results %>%
-  select(assay, onset, point, char, threshold) %>%
-  pivot_wider(names_from = "char", values_from = "point") %>%
-  group_by(assay, onset) %>%
-  arrange(threshold) %>%
-  ungroup()
+  pivot_longer(c(low, point, high), names_to = "bound", values_to = "est") %>%
+  select(-success, -total) %>%
+  pivot_wider(names_from = "char", values_from = "est")
 
 # Calculate ROC AUC
-aucs <- test_chars_only %>%
+
+calc_roc_auc <- function(sens, spec) {
+  DescTools::AUC(c(0, 1 - spec, 1), c(0, sens, 1))
+}
+
+aucs <- all_results %>%
   group_by(assay, onset) %>%
   summarise(
-    roc_auc = DescTools::AUC(c(0, 1 - Specificity, 1), c(0, Sensitivity, 1)),
+    point = calc_roc_auc(
+      point[char == "Sensitivity"], point[char == "Specificity"]
+    ),
+    low = calc_roc_auc(
+      low[char == "Sensitivity"], low[char == "Specificity"]
+    ),
+    high = calc_roc_auc(
+      high[char == "Sensitivity"], high[char == "Specificity"]
+    ),
     .groups = "drop"
   )
 
@@ -332,7 +343,7 @@ test_chars_only_plot_mod <- test_chars_only %>%
     | (assay == "svnt" & threshold == 20)
   ) %>%
   # Need to add the extremes
-  group_by(assay, onset) %>%
+  group_by(assay, onset, bound) %>%
   group_modify(
     ~ bind_rows(
       .x,
@@ -346,7 +357,7 @@ test_chars_only_plot_mod <- test_chars_only %>%
   arrange(threshold)
 
 roc_plot <- test_chars_only_plot_mod %>%
-  ggplot(aes(1 - Specificity, Sensitivity)) +
+  ggplot(aes(1 - Specificity, Sensitivity, group = bound)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
   theme(
     strip.background = element_blank(),
@@ -356,9 +367,10 @@ roc_plot <- test_chars_only_plot_mod %>%
   scale_x_continuous(labels = scales::percent_format(1)) +
   geom_abline(slope = 1, intercept = 0, lty = "11") +
   geom_path() +
-  geom_point() +
+  geom_point(data = filter(test_chars_only_plot_mod, bound == "point")) +
   geom_point(
-    data = filter(test_chars_only_plot_mod, label_threshold), col = "red"
+    data = filter(test_chars_only_plot_mod, label_threshold, bound == "point"),
+    col = "red"
   )
 
 save_plot(
@@ -381,7 +393,7 @@ save_plot(assay_comp_plot, "assay-comp", width = 20, height = 15)
 
 # Plots assay comparision for ROC AUC
 aucs_plot <- aucs %>%
-  ggplot(aes(assay, roc_auc)) +
+  ggplot(aes(assay, point)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
   theme(
     strip.background = element_blank(),
@@ -391,7 +403,8 @@ aucs_plot <- aucs %>%
   scale_y_continuous("ROC AUC") +
   facet_wrap(~onset) +
   geom_hline(yintercept = 0.5, lty = "11") +
-  geom_point()
+  geom_hline(yintercept = 1, lty = "13") +
+  geom_pointrange(aes(ymin = low, ymax = high))
 
 save_plot(aucs_plot, "aucs", width = 15, height = 15)
 
@@ -428,7 +441,7 @@ walk(
 
 # Table of results at standard thresholds
 
-f <- scales::percent_format(0.1)
+f <- function(x) paste0(round(x * 100, 1), "%")
 std_threshold_table <- std_threshold_results %>%
   filter(char %in% c("Sensitivity", "Specificity")) %>%
   mutate(
@@ -458,3 +471,18 @@ std_threshold_table_predvals <- std_threshold_predvals %>%
   )
 
 save_data(std_threshold_table_predvals, "assay-comp-predvals")
+
+# AUCs table
+f <- function(x) round(x, 3)
+aucs_table <- aucs %>%
+  mutate(
+    summary = glue::glue("{f(point)} [{f(low)}, {f(high)}]")
+  ) %>%
+  select(-point, -low, -high) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  select(
+    onset,
+    euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
+  )
+
+save_data(aucs_table, "assay-comp-auc")
