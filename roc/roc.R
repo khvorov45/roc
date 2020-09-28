@@ -175,7 +175,8 @@ one_prevalence <- function(prev, results, n_samples = 1e5) {
   results %>%
     group_by(assay, threshold, onset) %>%
     group_modify(~ calc_pop_pred_vals(.x, n_samples, prev)) %>%
-    mutate(prev = prev)
+    mutate(prev = prev) %>%
+    ungroup()
 }
 
 filter_std_thresholds <- function(all_results,
@@ -350,6 +351,7 @@ walk(
 
 f <- scales::percent_format(0.1)
 std_threshold_table <- std_threshold_results %>%
+  filter(char %in% c("Sensitivity", "Specificity")) %>%
   mutate(
     summary = glue::glue(
       "{f(point)} [{f(low)} - {f(high)}] ({success} / {total})"
@@ -359,6 +361,19 @@ std_threshold_table <- std_threshold_results %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
   select(
     onset, char, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
+  )
+
+std_threshold_predvals %>%
+  mutate(
+    summary = glue::glue(
+      "{f(point)} [{f(low)} - {f(high)}]"
+    )
+  ) %>%
+  select(-threshold, -low, -point, -high) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  select(
+    prev, onset, char,
+    euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
   )
 
 save_data(std_threshold_table, "assay-comp")
