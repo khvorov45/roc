@@ -257,7 +257,7 @@ onsets <- na.omit(unique(data$symptom_onset_cat))
 onsets <- onsets[onsets != "no infection"]
 
 indiv_onsets <- future_map_dfr(onsets, filter_one_onset, thresholds, data)
-any_onset <- future_pmap_dfr(thresholds, calc_both_one_threshold, data)
+any_onset <- future_pmap_dfr(thresholds, one_threshold, data)
 
 all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
   mutate(onset = factor(onset, levels = c(levels(onsets), "Any")))
