@@ -72,7 +72,7 @@ The dots correspond to
 thresholds actually tested. The red dot is the standard threshold. The ribbon
 is the 95% CI as per `roc.csv`.
 
-# `roc/{assay-name-predvals}.png`
+# `roc/{assay-name}-predvals.png`
 
 PPV and NPV at different prevalences at standard threshold at different onsets.
 The x-axis is on a log scale.
