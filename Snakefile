@@ -61,8 +61,16 @@ rule roc:
     shell:
         "Rscript roc/roc.R"
 
-rule all:
+rule zip:
     input:
         rules.data.output,
         rules.data_plot.output,
         rules.roc.output
+    output:
+        "roc.zip"
+    shell:
+        "zip -r roc.zip . -x 'renv/library*' '.snakemake*' '.deps-installed'"
+
+rule all:
+    input:
+        rules.zip.output
