@@ -386,7 +386,7 @@ std_threshold_predvals <- pop_pred_vals %>% filter_std_thresholds()
 assay_comp_plot <- std_threshold_results %>%
   filter(char %in% c("Sensitivity", "Specificity")) %>%
   plot_assay_comp() +
-  xlab("Assay at any threshold") +
+  xlab("Assay at standard threshold") +
   facet_grid(char ~ onset, scales = "free_y")
 
 save_plot(assay_comp_plot, "assay-comp", width = 20, height = 15)
@@ -419,7 +419,7 @@ assay_comp_predvals <- std_threshold_predvals %>%
     )
   ) %>%
   plot_assay_comp() +
-  xlab("Assay at any threshold for any onset") +
+  xlab("Assay at standard threshold for any onset") +
   facet_grid(char ~ prev_lab, scales = "free_y")
 
 save_plot(
@@ -443,7 +443,6 @@ walk(
 
 f <- function(x) paste0(round(x * 100, 1), "%")
 std_threshold_table <- std_threshold_results %>%
-  filter(char %in% c("Sensitivity", "Specificity")) %>%
   mutate(
     summary = glue::glue(
       "{f(point)} [{f(low)} - {f(high)}] ({success} / {total})"
