@@ -79,7 +79,9 @@ The x-axis is on a log scale.
 
 # `roc/assay-comp.png`
 
-Partial plot of
+Plot of `assay-comp.csv`.
+
+Sensitivity and specificity for each assay for each onset.
 
 # `roc/assay-comp-predvals.png`
 
