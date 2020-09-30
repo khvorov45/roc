@@ -123,39 +123,61 @@ quantile_to_df <- function(samples) {
 calc_pop_pred_vals <- function(results, n_samples = 1e5, prev = 0.1) {
   # Sensitivity
   sens <- with(results, point[char == "Sensitivity"])
-  sens_samples <- with(
-    results,
-    gen_beta_samples(
-      n_samples, success[char == "Sensitivity"], total[char == "Sensitivity"]
-    )
-  )
+  sens_low <- with(results, low[char == "Sensitivity"])
+  sens_high <- with(results, high[char == "Sensitivity"])
+  # sens_samples <- with(
+  #   results,
+  #   gen_beta_samples(
+  #     n_samples, success[char == "Sensitivity"], total[char == "Sensitivity"]
+  #   )
+  # )
   # Specificity
   spec <- with(results, point[char == "Specificity"])
-  spec_samples <- with(
-    results,
-    gen_beta_samples(
-      n_samples, success[char == "Specificity"], total[char == "Specificity"]
-    )
-  )
+  spec_low <- with(results, low[char == "Specificity"])
+  spec_high <- with(results, high[char == "Specificity"])
+  # spec_samples <- with(
+  #   results,
+  #   gen_beta_samples(
+  #     n_samples, success[char == "Specificity"], total[char == "Specificity"]
+  #   )
+  # )
   # Estimated probabilities
   disease_and_positive <- sens * prev
-  disease_and_positive_samples <- sens_samples * prev
+  disease_and_positive_low <- sens_low * prev
+  disease_and_positive_high <- sens_high * prev
+  # disease_and_positive_samples <- sens_samples * prev
   disease_and_negative <- (1 - sens) * prev
-  disease_and_negative_samples <- (1 - sens_samples) * prev
+  disease_and_negative_low <- (1 - sens_low) * prev
+  disease_and_negative_high <- (1 - sens_high) * prev
+  # disease_and_negative_samples <- (1 - sens_samples) * prev
   healthy_and_positive <- (1 - spec) * (1 - prev)
-  healthy_and_positive_samples <- (1 - spec_samples) * (1 - prev)
+  healthy_and_positive_low <- (1 - spec_low) * (1 - prev)
+  healthy_and_positive_high <- (1 - spec_high) * (1 - prev)
+  # healthy_and_positive_samples <- (1 - spec_samples) * (1 - prev)
   healthy_and_negative <- spec * (1 - prev)
-  healthy_and_negative_samples <- spec_samples * (1 - prev)
+  healthy_and_negative_low <- spec_low * (1 - prev)
+  healthy_and_negative_high <- spec_high * (1 - prev)
+  # healthy_and_negative_samples <- spec_samples * (1 - prev)
   # Estimated predicted values
   ppv <- disease_and_positive / (disease_and_positive + healthy_and_positive)
-  ppv_samples <- disease_and_positive_samples /
-    (disease_and_positive_samples + healthy_and_positive_samples)
+  ppv_low <- disease_and_positive_low /
+    (disease_and_positive_low + healthy_and_positive_low)
+  ppv_high <- disease_and_positive_high /
+    (disease_and_positive_high + healthy_and_positive_high)
+  # ppv_samples <- disease_and_positive_samples /
+  #  (disease_and_positive_samples + healthy_and_positive_samples)
   npv <- healthy_and_negative / (healthy_and_negative + disease_and_negative)
-  npv_samples <- healthy_and_negative_samples /
-    (healthy_and_negative_samples + disease_and_negative_samples)
+  npv_low <- healthy_and_negative_low /
+    (healthy_and_negative_low + disease_and_negative_low)
+  npv_high <- healthy_and_negative_high /
+    (healthy_and_negative_high + disease_and_negative_high)
+  # npv_samples <- healthy_and_negative_samples /
+  #  (healthy_and_negative_samples + disease_and_negative_samples)
   # Combine into a df
-  ppv_est <- quantile_to_df(ppv_samples) %>% mutate(point = ppv, char = "PPV")
-  npv_est <- quantile_to_df(npv_samples) %>% mutate(point = npv, char = "NPV")
+  # ppv_est <- quantile_to_df(ppv_samples) %>% mutate(point = ppv, char = "PPV")
+  # npv_est <- quantile_to_df(npv_samples) %>% mutate(point = npv, char = "NPV")
+  ppv_est <- tibble(low = ppv_low, point = ppv, high = ppv_high, char = "PPV")
+  npv_est <- tibble(low = npv_low, point = npv, high = npv_high, char = "NPV")
   bind_rows(ppv_est, npv_est)
 }
 
@@ -283,10 +305,22 @@ onsets <- na.omit(unique(data$symptom_onset_cat))
 onsets <- onsets[onsets != "no infection"]
 
 indiv_onsets <- future_map_dfr(onsets, filter_one_onset, thresholds, data)
-any_onset <- future_pmap_dfr(thresholds, one_threshold, data)
 
-all_results <- bind_rows(indiv_onsets, mutate(any_onset, onset = "Any")) %>%
-  mutate(onset = factor(onset, levels = c(levels(onsets), "Any"))) %>%
+# Not filtering by onset at all doesn't make sense because we want to compare
+# assays and sample compositions are different - wantai is mostly late infection
+# but svnt is mostly early infection, for example
+averaged_onsets <- indiv_onsets %>%
+  group_by(assay, char, threshold) %>%
+  summarise(
+    onset = "Averaged",
+    low = mean(low),
+    point = mean(point),
+    high = mean(high),
+    .groups = "drop"
+  )
+
+all_results <- bind_rows(indiv_onsets, averaged_onsets) %>%
+  mutate(onset = factor(onset, levels = c(levels(onsets), "Averaged"))) %>%
   distinct(assay, onset, threshold, char, .keep_all = TRUE)
 
 save_data(all_results, "roc")
@@ -328,7 +362,6 @@ save_data(pop_pred_vals, "pred-vals-pop")
 
 # Plot all results
 plots <- all_results %>%
-  filter(char %in% c("Sensitivity", "Specificity")) %>%
   group_by(assay) %>%
   group_map(~ plot_calcs(.x, paste(.y$assay)))
 
@@ -410,7 +443,7 @@ save_plot(aucs_plot, "aucs", width = 15, height = 15)
 
 # Plot assay comparison for predictive values
 assay_comp_predvals <- std_threshold_predvals %>%
-  filter(onset == "Any") %>%
+  filter(onset == "Averaged") %>%
   mutate(
     prev_lab = factor(
       prev,
@@ -419,7 +452,7 @@ assay_comp_predvals <- std_threshold_predvals %>%
     )
   ) %>%
   plot_assay_comp() +
-  xlab("Assay at standard threshold for any onset") +
+  xlab("Assay at standard threshold for unknown (averaged) onset") +
   facet_grid(char ~ prev_lab, scales = "free_y")
 
 save_plot(
