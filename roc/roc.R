@@ -478,7 +478,12 @@ f <- function(x) paste0(round(x * 100, 1), "%")
 std_threshold_table <- std_threshold_results %>%
   mutate(
     summary = glue::glue(
-      "{f(point)} [{f(low)} - {f(high)}] ({success} / {total})"
+      "{f(point)} [{f(low)} - {f(high)}]"
+    ),
+    summary = if_else(
+      is.na(success),
+      summary,
+      glue::glue("{summary} ({success} / {total})")
     )
   ) %>%
   select(-success, -total, -low, -point, -high, -threshold) %>%
