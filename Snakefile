@@ -30,6 +30,16 @@ rule data_plot:
     shell:
         "Rscript data-plot/data-plot.R"
 
+rule data_table:
+    input:
+        ".deps-installed",
+        "data-table/data-table.R",
+        "data/data.csv",
+    output:
+        "data-table/onset-assay-counts.csv"
+    shell:
+        "Rscript data-table/data-table.R"
+
 rule roc:
     input:
         ".deps-installed",
@@ -65,6 +75,7 @@ rule zip:
     input:
         rules.data.output,
         rules.data_plot.output,
+        rules.data_table.output,
         rules.roc.output
     output:
         "roc.zip"
