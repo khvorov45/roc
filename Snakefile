@@ -25,6 +25,7 @@ rule data_plot:
         ".deps-installed",
         "data-plot/data-plot.R",
         "data/data.csv",
+        "data/read_data.R",
     output:
         "data-plot/boxplots.png"
     shell:
@@ -35,8 +36,11 @@ rule data_table:
         ".deps-installed",
         "data-table/data-table.R",
         "data/data.csv",
+        "data/read_data.R",
+        "data/calc_result_one_threshold.R",
     output:
-        "data-table/onset-assay-counts.csv"
+        "data-table/onset-assay-counts.csv",
+        "data-table/assay-discrepancies.csv",
     shell:
         "Rscript data-table/data-table.R"
 
@@ -44,7 +48,9 @@ rule roc:
     input:
         ".deps-installed",
         "roc/roc.R",
-        "data/data.csv"
+        "data/data.csv",
+        "data/read_data.R",
+        "data/calc_result_one_threshold.R",
     output:
         "roc/euro_iga.png",
         "roc/euro_iga-predvals.png",

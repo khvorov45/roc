@@ -93,7 +93,11 @@ all_data_mod <- all_data %>%
   filter(!(assay == "euro_iga" & !true_covid)) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%
   # Remove the unneeded variables
-  select(-cohort)
+  select(-cohort) %>%
+  # Add sample id
+  group_by(id, assay) %>%
+  mutate(sample_id = paste(id, row_number(), sep = "-")) %>%
+  ungroup()
 
 # Replace onset days for some covids with the newly provided
 onset <- read_raw("onset") %>%
