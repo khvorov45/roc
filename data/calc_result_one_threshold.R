@@ -15,7 +15,7 @@ determine_result <- function(measurement, threshold, equivocal_range = 0) {
 calc_result_one_threshold <- function(data,
                                       euro = 0.8,
                                       wantai = 0.9,
-                                      svnt = 0.2) {
+                                      svnt = 20) {
   data %>%
     mutate(
       result = case_when(
