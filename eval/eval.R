@@ -43,15 +43,20 @@ cis <- function(success, total) {
 
 # Script ======================================================================
 
-p <- 0.5
-t <- 20
-N <- 1e4
-tibble(
+p <- 20 / 1e5
+t <- 5e5
+N <- 1e2
+
+samples <- tibble(
   sample = 1:N,
   success = rbinom(N, t, p),
   total = t,
-) %>%
+)
+
+sample_cis <- samples %>%
   group_by(sample, success, total) %>%
-  summarise(cis(success, total), .groups = "drop") %>%
+  summarise(cis(success, total), .groups = "drop")
+
+sample_cis %>%
   group_by(ci) %>%
   summarise(sum(low < p & high > p) / n())
