@@ -25,17 +25,6 @@ count_results <- function(data) {
     )
 }
 
-count_true_outcome <- function(data) {
-  data %>%
-    group_by(result) %>%
-    summarise(
-      positive = sum(true_covid),
-      negative = sum(!true_covid),
-      total = n(),
-      .groups = "drop"
-    )
-}
-
 calc_prop_ci <- function(success, total) {
   res <- PropCIs::exactci(success, total, 0.95)
   tibble(
@@ -495,3 +484,30 @@ aucs_table <- aucs %>%
   )
 
 save_data(aucs_table, "assay-comp-auc")
+
+# Random cohort specificity
+
+random_cohort_spec <- data %>%
+  calc_result_one_threshold() %>%
+  filter(group != "covid") %>%
+  bind_rows(mutate(., group = "combined")) %>%
+  group_by(assay, group) %>%
+  group_modify(~ count_results(.x)) %>%
+  summarise(calc_prop_ci(negative, total), .groups = "drop")
+
+save_data(random_cohort_spec, "random-cohort-spec")
+
+f <- function(x) paste0(round(x * 100, 1), "%")
+random_cohort_spec_table <- random_cohort_spec %>%
+  mutate(
+    summary = glue::glue(
+      "{f(point)} [{f(low)} - {f(high)}] ({success} / {total})"
+    )
+  ) %>%
+  select(-success, -total, -low, -point, -high) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  select(
+    group, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
+  )
+
+save_data(random_cohort_spec_table, "random-cohort-spec-table")

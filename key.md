@@ -93,3 +93,11 @@ PPV and NPV at different prevalences at standard threshold for any onset.
 Plot of `aucs.csv`
 
 ROC AUC and best/worst case interval for assays at different onsets
+
+# `roc/random-cohort-spec`
+
+Specificity at standard thresholds for the "random cohort"
+
+# `roc/random-cohort-spec-table`
+
+Table summary of `roc/random-cohort-spec`

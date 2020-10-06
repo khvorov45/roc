@@ -88,7 +88,14 @@ unique(all_data$symptom_onset_days)
 unique(all_data$assay)
 
 all_data_mod <- all_data %>%
-  mutate(true_covid = str_detect(tolower(cohort), "pcr pos")) %>%
+  mutate(
+    group = case_when(
+      str_detect(tolower(cohort), "pcr pos") ~ "covid",
+      str_detect(tolower(cohort), "healthy control") ~ "healthy",
+      TRUE ~ "non-covid"
+    ),
+    true_covid = group == "covid"
+  ) %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & !true_covid)) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%

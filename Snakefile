@@ -73,7 +73,9 @@ rule roc:
         "roc/assay-comp.csv",
         "roc/assay-comp-predvals.csv",
         "roc/assay-comp-auc.csv",
-        "roc/pred-vals-pop.csv"
+        "roc/pred-vals-pop.csv",
+        "roc/random-cohort-spec.csv",
+        "roc/random-cohort-spec-table.csv",
     shell:
         "Rscript roc/roc.R"
 
