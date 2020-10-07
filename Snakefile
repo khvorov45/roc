@@ -42,6 +42,7 @@ rule data_table:
     output:
         "data-table/onset-assay-counts.csv",
         "data-table/assay-discrepancies.csv",
+        "data-table/assay-counts.csv",
     shell:
         "Rscript data-table/data-table.R"
 
