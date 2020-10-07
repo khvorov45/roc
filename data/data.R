@@ -55,6 +55,19 @@ svnt <- read_raw("svnt", range = "A3:L444") %>%
   ) %>%
   mutate(assay = "svnt")
 
+svnt_more <- read_raw("svnt-more") %>%
+  # All id-measurement pairs are present in svnt, it's just measurement 2 that
+  # I need
+  filter(!is.na(measurement_2)) %>%
+  select(id, measurement = measurement_2, cohort) %>%
+  mutate(
+    symptom_onset_days = NA_character_,
+    id = as.character(id),
+    assay = "svnt"
+  )
+
+svnt_final <- bind_rows(svnt, svnt_more)
+
 wantai <- read_raw("wantai", range = "B3:O349") %>%
   select(
     id,
@@ -66,7 +79,7 @@ wantai <- read_raw("wantai", range = "B3:O349") %>%
   lengthen_measurement("wantai")
 
 # Unite them
-all_data <- bind_rows(list(euro_ncp, euro_s1, svnt, wantai)) %>%
+all_data <- bind_rows(list(euro_ncp, euro_s1, svnt_final, wantai)) %>%
   filter(!is.na(measurement))
 
 # Look for multiple measurement from the same individual for the same assay
@@ -74,8 +87,9 @@ length(unique(all_data$id)) # Total unique individuals
 
 # Number of individuals that provided more than 1 measurement per assay
 all_data %>%
-  count(id, assay) %>%
-  filter(n > 1)
+  count(id, assay, name = "n_samples") %>%
+  filter(n_samples > 1) %>%
+  count(id, n_samples, name = "n_assays")
 
 # Since the number of individuals that provided more than 1 measument per assay
 # (more than 1 being only 2 for all of these cases)
