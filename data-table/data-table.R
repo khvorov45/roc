@@ -40,3 +40,15 @@ assay_discrepancies <- data %>%
   arrange(true_covid, desc(count))
 
 save_data(assay_discrepancies, "assay-discrepancies")
+
+# Assay samples vs unique individuals
+assay_counts <- data %>%
+  group_by(assay) %>%
+  summarise(
+    n_indiv = length(unique(id)),
+    n_samples = n(),
+    summary = glue::glue("{n_samples} ({n_indiv})"),
+    .groups = "drop"
+  )
+
+save_data(assay_counts, "assay-counts")

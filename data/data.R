@@ -89,7 +89,9 @@ length(unique(all_data$id)) # Total unique individuals
 all_data %>%
   count(id, assay, name = "n_samples") %>%
   filter(n_samples > 1) %>%
-  count(id, n_samples, name = "n_assays")
+  group_by(id, n_samples) %>%
+  summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
+  print(n = 50)
 
 # Since the number of individuals that provided more than 1 measument per assay
 # (more than 1 being only 2 for all of these cases)
