@@ -9,6 +9,8 @@ data_plot_dir <- "data-plot"
 
 source(file.path(data_dir, "read_data.R"))
 
+source(file.path(data_dir, "calc_result_one_threshold.R"))
+
 save_plot <- function(plot, name, ...) {
   ggdark::ggsave_dark(
     file.path(data_plot_dir, paste0(name, ".png")),
@@ -60,3 +62,49 @@ boxplots <- data %>%
   )
 
 save_plot(boxplots, "boxplots", width = 20, height = 15)
+
+# Heatmap of results
+data_heat <- data %>%
+  calc_result_one_threshold() %>%
+  group_by(sample_id) %>%
+  mutate(discordant = length(unique(result)) > 1, total = length(result)) %>%
+  ungroup() %>%
+  filter(discordant) %>%
+  mutate(
+    sample_id = reorder(sample_id, total),
+    group_lbl = if_else(true_covid, as.character(symptom_onset_cat), group) %>%
+      factor(c("<7", "7-14", ">14", "non-covid", "healthy"))
+  )
+
+counts <- data_heat %>%
+  select(sample_id, group_lbl, measurement, assay) %>%
+  pivot_wider(names_from = "assay", values_from = "measurement") %>%
+  count(group_lbl)
+
+heatmap <- data_heat %>%
+  ggplot(aes(assay, sample_id)) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+  ) +
+  scale_fill_manual(values = c("green", "red")) +
+  scale_y_discrete("Sample id", expand = expansion()) +
+  scale_x_discrete("Assay", expand = expansion()) +
+  geom_tile(aes(fill = result)) +
+  geom_text(aes(label = signif(measurement, 2)), col = "black") +
+  facet_wrap(
+    ~group_lbl,
+    ncol = 1, scales = "free_y", strip.position = "right"
+  )
+
+# Adjust the facet size like a psychopath
+gt <- ggplot_gtable(ggplot_build(heatmap))
+gt$heights[7] <- unit(counts$n[[1]], "null")
+gt$heights[11] <- unit(counts$n[[2]], "null")
+gt$heights[15] <- unit(counts$n[[3]], "null")
+gt$heights[19] <- unit(counts$n[[4]], "null")
+gt$heights[23] <- unit(counts$n[[5]], "null")
+
+png(file.path(data_plot_dir, "heatmap-discordant.png"), width = 20, height = 30, units = "cm", res = 100)
+grid::grid.draw(gt)
+dev.off()

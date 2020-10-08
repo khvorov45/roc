@@ -28,7 +28,8 @@ rule data_plot:
         "data/data.csv",
         "data/read_data.R",
     output:
-        "data-plot/boxplots.png"
+        "data-plot/boxplots.png",
+        "data-plot/heatmap-discordant.png",
     shell:
         "Rscript data-plot/data-plot.R"
 
