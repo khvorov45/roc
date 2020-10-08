@@ -42,13 +42,47 @@ assay_discrepancies <- data %>%
 save_data(assay_discrepancies, "assay-discrepancies")
 
 # Assay samples vs unique individuals
-assay_counts <- data %>%
+s <- function(data) {
+  data %>%
+    filter(!is.na(symptom_onset_cat)) %>%
+    summarise(
+      n_indiv = length(unique(id)),
+      n_samples = n(),
+      summary = glue::glue("{n_samples} ({n_indiv})"),
+      .groups = "drop"
+    ) %>%
+    select(-n_indiv, -n_samples)
+}
+assay_counts_onsets <- data %>%
+  group_by(assay, symptom_onset_cat) %>%
+  s() %>%
+  rename(subset = symptom_onset_cat)
+assay_counts_group <- data %>%
+  group_by(assay, group) %>%
+  s() %>%
+  rename(subset = group)
+assay_counts_overall <- data %>%
   group_by(assay) %>%
-  summarise(
-    n_indiv = length(unique(id)),
-    n_samples = n(),
-    summary = glue::glue("{n_samples} ({n_indiv})"),
-    .groups = "drop"
-  )
+  s() %>%
+  mutate(subset = "combined")
+
+assay_counts <- bind_rows(
+  list(assay_counts_onsets, assay_counts_group, assay_counts_overall)
+) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  mutate(subset = factor(
+    subset,
+    c(
+      "<7", "7-14", ">14", "covid",
+      "healthy", "non-covid", "no infection",
+      "combined"
+    ),
+    c(
+      "<7", "7-14", ">14", "covid total",
+      "healthy", "non-covid infection", "no covid total",
+      "overall total"
+    )
+  )) %>%
+  arrange(subset)
 
 save_data(assay_counts, "assay-counts")
