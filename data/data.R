@@ -82,22 +82,6 @@ wantai <- read_raw("wantai", range = "B3:O349") %>%
 all_data <- bind_rows(list(euro_ncp, euro_s1, svnt_final, wantai)) %>%
   filter(!is.na(measurement))
 
-# Look for multiple measurement from the same individual for the same assay
-length(unique(all_data$id)) # Total unique individuals
-
-# Number of individuals that provided more than 1 measurement per assay
-all_data %>%
-  count(id, assay, name = "n_samples") %>%
-  filter(n_samples > 1) %>%
-  group_by(id, n_samples) %>%
-  summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
-  print(n = 50)
-
-# Since the number of individuals that provided more than 1 measument per assay
-# (more than 1 being only 2 for all of these cases)
-# is much smaller than the total number of unique individuals, I'll ignore this
-# and pretend that all observations are independent.
-
 # Modify variables
 unique(all_data$cohort)
 unique(all_data$symptom_onset_days)
@@ -116,11 +100,7 @@ all_data_mod <- all_data %>%
   filter(!(assay == "euro_iga" & !true_covid)) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%
   # Remove the unneeded variables
-  select(-cohort) %>%
-  # Add sample id
-  group_by(id, assay) %>%
-  mutate(sample_id = paste(id, row_number(), sep = "-")) %>%
-  ungroup()
+  select(-cohort)
 
 # Replace onset days for some covids with the newly provided
 onset <- read_raw("onset") %>%
@@ -162,4 +142,43 @@ all_data_onset_cats <- all_data_new_onset %>%
   ) %>%
   select(-symptom_onset_days)
 
-save_data(all_data_onset_cats, "data")
+# The "Lab ID" in raw data is SOMETIMES an individual id and SOMETIMES a sample
+# id. There is NO systematic way to distinguish them, so I'll just trust
+# Suellen when she tells me which ids belong to the same individual
+all_data_fixids <- all_data_onset_cats %>%
+  mutate(
+    og_id = id,
+    id = case_when(
+      # Just random ids that are the same actually
+      id %in% c("20510199", "20510596", "20111141") ~ "20510199",
+      id %in% c(
+        "20509672", "20509673", "20509674", "20509686", "20509687", "20509688"
+      ) ~ "20509672",
+      TRUE ~ id
+    ) %>%
+      # Handle CVD010 CVD010A situation
+      str_replace("(\\d)[[:alpha:]]$", "\\1")
+  ) %>%
+  group_by(id, assay) %>%
+  mutate(sample_id = paste(id, row_number(), sep = "-")) %>%
+  ungroup()
+
+# Look for multiple measurement from the same individual for the same assay
+length(unique(all_data_fixids$id)) # Total unique individuals
+
+# Number of individuals that provided more than 1 measurement per assay
+all_data_fixids %>%
+  count(id, assay, name = "n_samples") %>%
+  filter(n_samples > 1) %>%
+  group_by(id, n_samples) %>%
+  summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
+  print(n = 50)
+
+# Since the number of individuals that provided more than 1 measument per assay
+# (more than 1 being only 2 for most of these cases)
+# is much smaller than the total number of unique individuals, I'll ignore this
+# and pretend that all observations are independent.
+# Since I fixed the ids the "much" smaller is not as "much" smaller as it used
+# to be.
+
+save_data(all_data_fixids, "data")
