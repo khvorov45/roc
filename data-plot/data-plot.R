@@ -73,7 +73,8 @@ data_heat <- data %>%
   mutate(
     sample_id = reorder(sample_id, total),
     group_lbl = if_else(true_covid, as.character(symptom_onset_cat), group) %>%
-      factor(c("<7", "7-14", ">14", "non-covid", "healthy"))
+      factor(c("<7", "7-14", ">14", "non-covid", "healthy")),
+    result = recode(result, "pos" = "Positive", "neg" = "Negative")
   )
 
 counts <- data_heat %>%
@@ -87,7 +88,7 @@ heatmap <- data_heat %>%
   theme(
     legend.position = "bottom",
   ) +
-  scale_fill_manual(values = c("#d9e2f3", "#fbe4d5")) +
+  scale_fill_manual("Test result", values = c("#d9e2f3", "#fbe4d5")) +
   scale_y_discrete("Sample id", expand = expansion()) +
   scale_x_discrete("Assay", expand = expansion()) +
   geom_tile(aes(fill = result)) +
@@ -99,11 +100,9 @@ heatmap <- data_heat %>%
 
 # Adjust the facet size like a psychopath
 gt <- ggplot_gtable(ggplot_build(heatmap))
-gt$heights[7] <- unit(counts$n[[1]], "null")
-gt$heights[11] <- unit(counts$n[[2]], "null")
-gt$heights[15] <- unit(counts$n[[3]], "null")
-gt$heights[19] <- unit(counts$n[[4]], "null")
-gt$heights[23] <- unit(counts$n[[5]], "null")
+for (i in seq_along(counts$n)) {
+  gt$heights[7 + (i - 1) * 4] <- unit(counts$n[[i]], "null")
+}
 
 png(file.path(data_plot_dir, "heatmap-discordant.png"), width = 20, height = 30, units = "cm", res = 100)
 grid::grid.draw(gt)
