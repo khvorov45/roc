@@ -48,7 +48,7 @@ s <- function(data) {
     summarise(
       n_indiv = length(unique(id)),
       n_samples = n(),
-      summary = glue::glue("{n_samples} ({n_indiv})"),
+      summary = glue::glue("{n_samples}"),
       .groups = "drop"
     ) %>%
     select(-n_indiv, -n_samples)

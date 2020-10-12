@@ -174,11 +174,18 @@ all_data_fixids %>%
   summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
   print(n = 50)
 
-# Since the number of individuals that provided more than 1 measument per assay
-# (more than 1 being only 2 for most of these cases)
-# is much smaller than the total number of unique individuals, I'll ignore this
-# and pretend that all observations are independent.
-# Since I fixed the ids the "much" smaller is not as "much" smaller as it used
-# to be.
+# Keep the FIRST observation per individual per assay.
+# There is no date associated with repeat observations (of course there isn't)
+# so just assume that the ones that appear first in the data are chronologicaly
+# first (that's how they were recorded, so it should work)
 
-save_data(all_data_fixids, "data")
+all_data_firsts <- all_data_fixids %>%
+  group_by(id, assay) %>%
+  filter(row_number() == 1) %>%
+  ungroup()
+
+# Whoever doesn't have an onset category won't be used in the analysis
+all_data_no_missing_onset <- all_data_firsts %>%
+  filter(!is.na(symptom_onset_cat))
+
+save_data(all_data_no_missing_onset, "data")
