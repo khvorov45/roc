@@ -451,7 +451,8 @@ std_threshold_table <- std_threshold_results %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
   select(
     onset, char, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
-  )
+  ) %>%
+  arrange(onset)
 
 save_data(std_threshold_table, "assay-comp")
 
@@ -493,7 +494,11 @@ random_cohort_spec <- data %>%
   bind_rows(mutate(., group = "combined")) %>%
   group_by(assay, group) %>%
   group_modify(~ count_results(.x)) %>%
-  summarise(calc_prop_ci(negative, total), .groups = "drop")
+  summarise(calc_prop_ci(negative, total), .groups = "drop") %>%
+  mutate(
+    group = factor(group, levels = c("healthy", "non-covid", "combined"))
+  ) %>%
+  arrange(assay, group)
 
 save_data(random_cohort_spec, "random-cohort-spec")
 
