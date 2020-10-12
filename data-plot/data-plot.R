@@ -27,13 +27,13 @@ boxplots <- data %>%
   filter(!is.na(symptom_onset_cat)) %>%
   mutate(
     min_threshold = case_when(
-      startsWith(assay, "euro") ~ 0.8,
-      startsWith(assay, "wantai") ~ 0.9,
+      startsWith(as.character(assay), "euro") ~ 0.8,
+      startsWith(as.character(assay), "wantai") ~ 0.9,
       assay == "svnt" ~ 20,
     ),
     max_threshold = case_when(
-      startsWith(assay, "euro") ~ 1.1,
-      startsWith(assay, "wantai") ~ 1.1,
+      startsWith(as.character(assay), "euro") ~ 1.1,
+      startsWith(as.character(assay), "wantai") ~ 1.1,
       assay == "svnt" ~ 21, # Need to make it visible
     )
   ) %>%

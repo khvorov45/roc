@@ -58,8 +58,8 @@ one_threshold <- function(min_euro,
     ungroup() %>%
     mutate(
       threshold = case_when(
-        startsWith(assay, "euro") ~ min_euro,
-        startsWith(assay, "wantai") ~ min_wantai,
+        startsWith(as.character(assay), "euro") ~ min_euro,
+        startsWith(as.character(assay), "wantai") ~ min_wantai,
         assay == "svnt" ~ min_svnt,
       )
     )
@@ -154,8 +154,8 @@ filter_std_thresholds <- function(all_results,
                                   euro = 0.8, wantai = 0.9, svnt = 20) {
   all_results %>%
     filter(
-      (startsWith(assay, "euro") & threshold == euro)
-      | (startsWith(assay, "wantai") & threshold == wantai)
+      (startsWith(as.character(assay), "euro") & threshold == euro)
+      | (startsWith(as.character(assay), "wantai") & threshold == wantai)
       | (assay == "svnt" & threshold == svnt)
     )
 }
@@ -163,8 +163,8 @@ filter_std_thresholds <- function(all_results,
 plot_calcs <- function(data, assay = "") {
   data_mod <- data %>%
     mutate(color = if_else(
-      (startsWith(assay, "euro") & threshold == 0.8)
-      | (startsWith(assay, "wantai") & threshold == 0.9)
+      (startsWith(as.character(assay), "euro") & threshold == 0.8)
+      | (startsWith(as.character(assay), "wantai") & threshold == 0.9)
       | (assay == "svnt" & threshold == 20), "red", "black",
     ))
   plot <- data_mod %>%
@@ -332,9 +332,10 @@ walk(plots, ~ save_plot(.x, attr(.x, "assay"), width = 25, height = 15))
 test_chars_only_plot_mod <- test_chars_only %>%
   # Find thresholds to label
   mutate(
-    label_threshold = (startsWith(assay, "euro") & threshold == 0.8)
-    | (startsWith(assay, "wantai") & threshold == 0.9)
-    | (assay == "svnt" & threshold == 20)
+    label_threshold =
+      (startsWith(as.character(assay), "euro") & threshold == 0.8)
+      | (startsWith(as.character(assay), "wantai") & threshold == 0.9)
+      | (assay == "svnt" & threshold == 20)
   ) %>%
   # Need to add the extremes
   group_by(assay, onset, bound) %>%
@@ -448,10 +449,9 @@ std_threshold_table <- std_threshold_results %>%
     )
   ) %>%
   select(-success, -total, -low, -point, -high, -threshold) %>%
+  arrange(assay) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
-  select(
-    onset, char, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
-  ) %>%
+  select(onset, char, everything()) %>%
   arrange(onset)
 
 save_data(std_threshold_table, "assay-comp")
@@ -464,10 +464,7 @@ std_threshold_table_predvals <- std_threshold_predvals %>%
   ) %>%
   select(-threshold, -low, -point, -high) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
-  select(
-    prev, onset, char,
-    euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
-  )
+  select(prev, onset, char, everything())
 
 save_data(std_threshold_table_predvals, "assay-comp-predvals")
 
@@ -479,10 +476,7 @@ aucs_table <- aucs %>%
   ) %>%
   select(-point, -low, -high) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
-  select(
-    onset,
-    euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
-  )
+  select(onset, everything())
 
 save_data(aucs_table, "assay-comp-auc")
 
@@ -511,8 +505,6 @@ random_cohort_spec_table <- random_cohort_spec %>%
   ) %>%
   select(-success, -total, -low, -point, -high) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
-  select(
-    group, euro_ncp, euro_igg, euro_iga, svnt, wantai_tot, wantai_igm
-  )
+  select(group, everything())
 
 save_data(random_cohort_spec_table, "random-cohort-spec-table")
