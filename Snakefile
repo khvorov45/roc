@@ -67,18 +67,18 @@ rule roc:
         "roc/wantai_igm-predvals.png",
         "roc/wantai_tot.png",
         "roc/wantai_tot-predvals.png",
-        "roc/assay-comp.png",
+        "roc/assay-comp-sens.png",
+        "roc/assay-comp-spec.png",
         "roc/assay-comp-predvals.png",
         "roc/roc.png",
         "roc/aucs.png",
         "roc/roc.csv",
         "roc/aucs.csv",
-        "roc/assay-comp.csv",
+        "roc/assay-comp-sens.csv",
+        "roc/assay-comp-spec.csv",
         "roc/assay-comp-predvals.csv",
         "roc/assay-comp-auc.csv",
         "roc/pred-vals-pop.csv",
-        "roc/random-cohort-spec.csv",
-        "roc/random-cohort-spec-table.csv",
     shell:
         "Rscript roc/roc.R"
 

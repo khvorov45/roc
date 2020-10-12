@@ -221,7 +221,7 @@ plot_assay_comp <- function(data) {
       axis.text.x = element_text(angle = 30, hjust = 1),
       panel.spacing = unit(0, "null")
     ) +
-    scale_y_continuous("Estimate", labels = scales::percent_format(1)) +
+    scale_y_continuous(labels = scales::percent_format(1)) +
     geom_pointrange(aes(ymin = low, ymax = high))
 }
 
@@ -379,12 +379,13 @@ std_threshold_predvals <- pop_pred_vals %>% filter_std_thresholds()
 
 # Plot assay comparison
 assay_comp_plot <- std_threshold_results %>%
-  filter(char %in% c("Sensitivity", "Specificity")) %>%
+  filter(char %in% c("Sensitivity")) %>%
   plot_assay_comp() +
   xlab("Assay at standard threshold") +
-  facet_grid(char ~ onset, scales = "free_y")
+  ylab("Sensitivity") +
+  facet_wrap(~onset, nrow = 1)
 
-save_plot(assay_comp_plot, "assay-comp", width = 20, height = 15)
+save_plot(assay_comp_plot, "assay-comp-sens", width = 20, height = 10)
 
 # Plots assay comparision for ROC AUC
 aucs_plot <- aucs %>%
@@ -396,12 +397,12 @@ aucs_plot <- aucs %>%
   ) +
   scale_x_discrete("Assay") +
   scale_y_continuous("ROC AUC") +
-  facet_wrap(~onset) +
+  facet_wrap(~onset, nrow = 1) +
   geom_hline(yintercept = 0.5, lty = "11") +
   geom_hline(yintercept = 1, lty = "13") +
   geom_pointrange(aes(ymin = low, ymax = high))
 
-save_plot(aucs_plot, "aucs", width = 15, height = 15)
+save_plot(aucs_plot, "aucs", width = 20, height = 10)
 
 # Plot assay comparison for predictive values
 assay_comp_predvals <- std_threshold_predvals %>%
@@ -438,6 +439,7 @@ walk(
 
 f <- function(x) paste0(round(x * 100, 1), "%")
 std_threshold_table <- std_threshold_results %>%
+  filter(char == "Sensitivity") %>%
   mutate(
     summary = glue::glue(
       "{f(point)} [{f(low)} - {f(high)}]"
@@ -448,13 +450,13 @@ std_threshold_table <- std_threshold_results %>%
       glue::glue("{summary} ({success} / {total})")
     )
   ) %>%
-  select(-success, -total, -low, -point, -high, -threshold) %>%
+  select(-success, -total, -low, -point, -high, -threshold, -char) %>%
   arrange(assay) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
-  select(onset, char, everything()) %>%
+  select(onset, everything()) %>%
   arrange(onset)
 
-save_data(std_threshold_table, "assay-comp")
+save_data(std_threshold_table, "assay-comp-sens")
 
 std_threshold_table_predvals <- std_threshold_predvals %>%
   mutate(
@@ -494,7 +496,12 @@ random_cohort_spec <- data %>%
   ) %>%
   arrange(assay, group)
 
-save_data(random_cohort_spec, "random-cohort-spec")
+random_cohort_spec_plot <- random_cohort_spec %>%
+  plot_assay_comp() +
+  facet_wrap(~group, nrow = 1) +
+  ylab("Specificity")
+
+save_plot(random_cohort_spec_plot, "assay-comp-spec", width = 17, height = 10)
 
 f <- function(x) paste0(round(x * 100, 1), "%")
 random_cohort_spec_table <- random_cohort_spec %>%
@@ -507,4 +514,4 @@ random_cohort_spec_table <- random_cohort_spec %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
   select(group, everything())
 
-save_data(random_cohort_spec_table, "random-cohort-spec-table")
+save_data(random_cohort_spec_table, "assay-comp-spec")
