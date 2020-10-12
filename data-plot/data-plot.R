@@ -99,14 +99,14 @@ heatmap <- data_heat %>%
   )
 
 # Adjust the facet size like a psychopath
+
+png(
+  file.path(data_plot_dir, "heatmap-discordant.png"),
+  width = 20, height = 30, units = "cm", res = 150
+)
 gt <- ggplot_gtable(ggplot_build(heatmap))
 for (i in seq_along(counts$n)) {
   gt$heights[7 + (i - 1) * 4] <- unit(counts$n[[i]], "null")
 }
-
-png(
-  file.path(data_plot_dir, "heatmap-discordant.png"),
-  width = 20, height = 30, units = "cm", res = 100
-)
 grid::grid.draw(gt)
 dev.off()
