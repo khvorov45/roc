@@ -9,8 +9,6 @@ data_plot_dir <- "data-plot"
 
 source(file.path(data_dir, "read_data.R"))
 
-source(file.path(data_dir, "calc_result_one_threshold.R"))
-
 save_plot <- function(plot, name, ...) {
   ggdark::ggsave_dark(
     file.path(data_plot_dir, paste0(name, ".png")),
@@ -22,7 +20,13 @@ save_plot <- function(plot, name, ...) {
 # Script ======================================================================
 
 data <- read_data("data") %>%
-  filter(!assay %in% c("svnt-20", "svnt-25"))
+  filter(!assay %in% c("svnt-20", "svnt-25")) %>%
+  mutate(
+    group_lbl = if_else(
+      group == "covid", as.character(symptom_onset_cat), group
+    ) %>%
+      factor(c("<7", "7-14", ">14", "non-covid", "healthy"))
+  )
 
 boxplots <- data %>%
   filter(!is.na(symptom_onset_cat)) %>%
@@ -38,11 +42,12 @@ boxplots <- data %>%
       assay == "svnt" ~ 21, # Need to make it visible
     )
   ) %>%
-  ggplot(aes(symptom_onset_cat, measurement)) +
+  ggplot(aes(group_lbl, measurement)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
   facet_wrap(~assay, scales = "free_y") +
   theme(
-    strip.background = element_blank()
+    strip.background = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
   scale_x_discrete("Symptom onset", expand = expansion(0)) +
   scale_y_continuous("Measure") +
@@ -58,7 +63,7 @@ boxplots <- data %>%
     outlier.fill = NA
   ) +
   geom_rect(
-    aes(xmin = 0.5, xmax = 4.5, ymin = min_threshold, ymax = max_threshold),
+    aes(xmin = 0.5, xmax = 5.5, ymin = min_threshold, ymax = max_threshold),
     alpha = 0.01
   )
 
@@ -66,7 +71,6 @@ save_plot(boxplots, "boxplots", width = 20, height = 15)
 
 # Heatmap of results
 data_heat <- data %>%
-  calc_result_one_threshold() %>%
   group_by(id) %>%
   mutate(discordant = length(unique(result)) > 1, total = length(result)) %>%
   ungroup() %>%
