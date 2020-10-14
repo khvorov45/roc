@@ -4,7 +4,9 @@ read_data <- function(name) {
     col_types = cols(
       id = col_character(),
       assay = col_factor(c(
-        "euro_iga", "euro_igg", "euro_ncp", "svnt", "wantai_igm", "wantai_tot"
+        "euro_iga", "euro_igg", "euro_ncp",
+        "svnt", "svnt-20", "svnt-25",
+        "wantai_igm", "wantai_tot"
       )),
       symptom_onset_cat = col_factor(c("<7", "7-14", ">14", "no infection"))
     )

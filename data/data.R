@@ -14,10 +14,11 @@ read_raw <- function(name, ...) {
 lengthen_measurement <- function(data, name) {
   data %>%
     pivot_longer(
-      contains("measurement"),
-      names_to = "assay", values_to = "measurement"
+      c(contains("measurement"), contains("result")),
+      names_to = c(".value", "assay"),
+      names_pattern = "([^_]*)_(.*)"
     ) %>%
-    mutate(assay = str_replace(assay, "measurement", name))
+    mutate(assay = paste(name, assay, sep = "_"))
 }
 
 save_data <- function(data, name) {
@@ -31,7 +32,8 @@ euro_ncp <- read_raw("euro-ncp", range = "A2:L319") %>%
     id,
     cohort = notes,
     measurement = Index,
-    symptom_onset_days
+    symptom_onset_days,
+    result = Interpretation
   ) %>%
   mutate(assay = "euro_ncp")
 
@@ -42,6 +44,9 @@ euro_s1 <- read_raw("euro-s1", range = "A2:T308") %>%
     measurement_igg = Index_igg,
     measurement_iga = Index_iga,
     measurement_iga_new = Index_iga_new,
+    result_igg = Interpretation_igg,
+    result_iga = Interpretation_iga,
+    result_iga_new = Interpretation_iga_new,
     symptom_onset_days
   ) %>%
   lengthen_measurement("euro")
@@ -51,22 +56,10 @@ svnt <- read_raw("svnt", range = "A3:L444") %>%
     id,
     cohort = notes,
     measurement = `% Inhib`,
+    result = `sVNT Int.`,
     symptom_onset_days
   ) %>%
   mutate(assay = "svnt")
-
-svnt_more <- read_raw("svnt-more") %>%
-  # All id-measurement pairs are present in svnt, it's just measurement 2 that
-  # I need
-  filter(!is.na(measurement_2)) %>%
-  select(id, measurement = measurement_2, cohort) %>%
-  mutate(
-    symptom_onset_days = NA_character_,
-    id = as.character(id),
-    assay = "svnt"
-  )
-
-svnt_final <- bind_rows(svnt, svnt_more)
 
 wantai <- read_raw("wantai", range = "B3:O349") %>%
   select(
@@ -74,33 +67,57 @@ wantai <- read_raw("wantai", range = "B3:O349") %>%
     cohort,
     measurement_tot = sco_tot,
     measurement_igm = sco_igm,
+    result_tot = interpret_tot,
+    result_igm = interpret_igm,
     symptom_onset_days
   ) %>%
   lengthen_measurement("wantai")
 
 # Unite them
-all_data <- bind_rows(list(euro_ncp, euro_s1, svnt_final, wantai)) %>%
+all_data <- bind_rows(list(euro_ncp, euro_s1, svnt, wantai)) %>%
   filter(!is.na(measurement))
+
+# There shouldn't be any missing results
+all_data %>%
+  filter(is.na(result))
 
 # Modify variables
 unique(all_data$cohort)
 unique(all_data$symptom_onset_days)
 unique(all_data$assay)
+unique(all_data$result)
 
 all_data_mod <- all_data %>%
   mutate(
     group = case_when(
       str_detect(tolower(cohort), "pcr pos") ~ "covid",
       str_detect(tolower(cohort), "healthy control") ~ "healthy",
+      str_detect(tolower(cohort), "corona") ~ "corona",
+      str_detect(tolower(cohort), "negative control") ~ "neg-control",
+      str_detect(tolower(cohort), "neg control") ~ "neg-control",
       TRUE ~ "non-covid"
     ),
-    true_covid = group == "covid"
+    result = tolower(result) %>%
+      str_replace_all("^equ$", "equiv") %>%
+      str_replace_all("/equ$", "/equiv") %>%
+      str_replace_all("/equ/", "/equiv/") %>%
+      str_replace_all("^eqiv$", "equiv") %>%
+      str_replace_all("equiv", "pos") %>%
+      str_replace_all("p0s", "pos") %>%
+      str_replace_all("pospos", "pos/pos") %>%
+      str_replace_all("([[:alpha:]]{3})x2", "\\1/\\1") %>%
+      map(., ~ str_split(.x, "/")) %>%
+      map(flatten) %>%
+      map_chr(
+        .,
+        function(res_vec) {
+          if (sum(res_vec == "pos") > sum(res_vec == "neg")) "pos" else "neg"
+        }
+      ),
   ) %>%
   # Remove old iga for the non-covids since we are not interested in it
-  filter(!(assay == "euro_iga" & !true_covid)) %>%
-  mutate(assay = recode(assay, "euro_iga_new" = "euro_iga")) %>%
-  # Remove the unneeded variables
-  select(-cohort)
+  filter(!(assay == "euro_iga" & group != "covid")) %>%
+  mutate(assay = recode(assay, "euro_iga_new" = "euro_iga"))
 
 # Replace onset days for some covids with the newly provided
 onset <- read_raw("onset") %>%
@@ -127,7 +144,9 @@ old_onset_fixed <- old_onset %>%
       as.integer(.))
   )
 
-all_data_new_onset <- bind_rows(new_onset, old_onset_fixed)
+all_data_new_onset <- bind_rows(new_onset, old_onset_fixed) %>%
+  # Can't use covids with missing onset
+  filter(!(group == "covid" & is.na(symptom_onset_days)))
 
 # Create onset categories
 all_data_onset_cats <- all_data_new_onset %>%
@@ -136,11 +155,13 @@ all_data_onset_cats <- all_data_new_onset %>%
       symptom_onset_days < 7 ~ "<7",
       symptom_onset_days <= 14 ~ "7-14",
       symptom_onset_days > 14 ~ ">14",
-      !true_covid ~ "no infection",
-      is.na(symptom_onset_days) ~ NA_character_
+      group != "covid" ~ "no infection",
     )
-  ) %>%
-  select(-symptom_onset_days)
+  )
+
+# Shouldn't be any missing symptom onset category
+all_data_onset_cats %>%
+  filter(is.na(symptom_onset_cat))
 
 # The "Lab ID" in raw data is SOMETIMES an individual id and SOMETIMES a sample
 # id. There is NO systematic way to distinguish them, so I'll just trust
@@ -161,31 +182,62 @@ all_data_fixids <- all_data_onset_cats %>%
   ) %>%
   group_by(id, assay) %>%
   mutate(sample_id = paste(id, row_number(), sep = "-")) %>%
+  ungroup() %>%
+  select(id, sample_id, everything()) %>%
+  select(-og_id)
+
+# Keep the first observation for covids going by symptom onset to avoid
+# potentially correlated observations
+all_data_covid_firsts <- all_data_fixids %>%
+  group_by(id, assay, symptom_onset_cat) %>%
+  filter(group != "covid" | symptom_onset_days == min(symptom_onset_days)) %>%
   ungroup()
 
+# For id's that appear in seasonal corona and non-covid, keep only the
+# seasonal corona
+all_data_only_seas_corona <- all_data_covid_firsts %>%
+  group_by(id, assay, symptom_onset_cat) %>%
+  filter(n() == 1 | (!"corona" %in% group | group == "corona")) %>%
+  filter(n() == 1 | (!"non-covid" %in% group | group == "non-covid")) %>%
+  ungroup() %>%
+  mutate(
+    group = recode(group, "corona" = "non-covid", "neg-control" = "non-covid")
+  )
+
 # Look for multiple measurement from the same individual for the same assay
-length(unique(all_data_fixids$id)) # Total unique individuals
+length(unique(all_data_only_seas_corona$id)) # Total unique individuals
 
 # Number of individuals that provided more than 1 measurement per assay
-all_data_fixids %>%
-  count(id, assay, name = "n_samples") %>%
+all_data_only_seas_corona %>%
+  count(id, assay, symptom_onset_cat, group, name = "n_samples") %>%
   filter(n_samples > 1) %>%
-  group_by(id, n_samples) %>%
+  group_by(id, n_samples, group) %>%
   summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
   print(n = 50)
 
-# Keep the FIRST observation per individual per assay.
-# There is no date associated with repeat observations (of course there isn't)
-# so just assume that the ones that appear first in the data are chronologicaly
-# first (that's how they were recorded, so it should work)
+# At this point just keep the first observation for everyone
 
-all_data_firsts <- all_data_fixids %>%
-  group_by(id, assay) %>%
+all_data_one_ind <- all_data_only_seas_corona %>%
+  group_by(id, assay, symptom_onset_cat) %>%
   filter(row_number() == 1) %>%
   ungroup()
 
-# Whoever doesn't have an onset category won't be used in the analysis
-all_data_no_missing_onset <- all_data_firsts %>%
-  filter(!is.na(symptom_onset_cat))
+# Add the two extra assays - svnt 1st observation at 20 and svnt 1st observation
+# at 25
+calc_svnt_extra <- function(data, threshold) {
+  data %>%
+    filter(assay == "svnt") %>%
+    mutate(
+      result = if_else(measurement < threshold, "neg", "pos"),
+      assay = paste0("svnt-", threshold)
+    )
+}
+svnt_20 <- calc_svnt_extra(all_data_one_ind, 20)
+svnt_25 <- calc_svnt_extra(all_data_one_ind, 25)
 
-save_data(all_data_no_missing_onset, "data")
+all_data_svnt_extra <- bind_rows(list(all_data_one_ind, svnt_20, svnt_25))
+
+all_data_final <- all_data_svnt_extra %>%
+  select(id, group, symptom_onset_cat, assay, measurement, result)
+
+save_data(all_data_final, "data")

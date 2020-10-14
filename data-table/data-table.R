@@ -20,7 +20,8 @@ save_data <- function(data, name) {
 
 # Script ======================================================================
 
-data <- read_data("data")
+data <- read_data("data") %>%
+  filter(!assay %in% c("svnt-20", "svnt-25"))
 
 onset_assay_counts <- data %>%
   count(assay, symptom_onset_cat) %>%
@@ -31,13 +32,13 @@ save_data(onset_assay_counts, "onset-assay-counts")
 f <- function(x) paste(x, collapse = " ")
 assay_discrepancies <- data %>%
   calc_result_one_threshold() %>%
-  group_by(sample_id, true_covid) %>%
+  group_by(id, group) %>%
   summarise(tibble(
     pos = f(assay[result == "pos"]),
     neg = f(assay[result == "neg"])
   ), .groups = "drop") %>%
-  count(pos, neg, true_covid, name = "count") %>%
-  arrange(true_covid, desc(count))
+  count(pos, neg, group, name = "count") %>%
+  arrange(group, desc(count))
 
 save_data(assay_discrepancies, "assay-discrepancies")
 

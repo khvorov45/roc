@@ -21,7 +21,8 @@ save_plot <- function(plot, name, ...) {
 
 # Script ======================================================================
 
-data <- read_data("data")
+data <- read_data("data") %>%
+  filter(!assay %in% c("svnt-20", "svnt-25"))
 
 boxplots <- data %>%
   filter(!is.na(symptom_onset_cat)) %>%
@@ -66,24 +67,26 @@ save_plot(boxplots, "boxplots", width = 20, height = 15)
 # Heatmap of results
 data_heat <- data %>%
   calc_result_one_threshold() %>%
-  group_by(sample_id) %>%
+  group_by(id) %>%
   mutate(discordant = length(unique(result)) > 1, total = length(result)) %>%
   ungroup() %>%
   filter(discordant) %>%
   mutate(
-    sample_id = reorder(sample_id, total),
-    group_lbl = if_else(true_covid, as.character(symptom_onset_cat), group) %>%
+    id = reorder(id, total),
+    group_lbl = if_else(
+      group == "covid", as.character(symptom_onset_cat), group
+    ) %>%
       factor(c("<7", "7-14", ">14", "non-covid", "healthy")),
     result = recode(result, "pos" = "Positive", "neg" = "Negative")
   )
 
 counts <- data_heat %>%
-  select(sample_id, group_lbl, measurement, assay) %>%
+  select(id, group_lbl, measurement, assay) %>%
   pivot_wider(names_from = "assay", values_from = "measurement") %>%
   count(group_lbl)
 
 heatmap <- data_heat %>%
-  ggplot(aes(assay, sample_id)) +
+  ggplot(aes(assay, id)) +
   theme_bw() +
   theme(
     legend.position = "bottom",
