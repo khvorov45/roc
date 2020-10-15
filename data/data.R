@@ -247,6 +247,6 @@ svnt_25 <- calc_svnt_extra(all_data_one_ind, 25)
 all_data_svnt_extra <- bind_rows(list(all_data_one_ind, svnt_20, svnt_25))
 
 all_data_final <- all_data_svnt_extra %>%
-  select(id, group, diag, symptom_onset_cat, assay, measurement, result)
+  select(id, group, symptom_onset_cat, assay, measurement, result)
 
 save_data(all_data_final, "data")
