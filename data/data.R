@@ -97,11 +97,11 @@ all_data_mod <- all_data %>%
     # Group from cohort
     group = case_when(
       str_detect(tolower(cohort), "pcr pos") ~ "covid",
-      str_detect(tolower(cohort), "healthy control") ~ "healthy",
-      str_detect(tolower(cohort), "negative control") ~ "healthy",
-      str_detect(tolower(cohort), "neg control") ~ "healthy",
-      str_detect(tolower(cohort), "corona") ~ "non-covid",
-      str_detect(tolower(cohort), "non-covid") ~ "non-covid",
+      str_detect(tolower(cohort), "healthy control") ~ "population",
+      str_detect(tolower(cohort), "negative control") ~ "population",
+      str_detect(tolower(cohort), "neg control") ~ "population",
+      str_detect(tolower(cohort), "corona") ~ "cross-reactive",
+      str_detect(tolower(cohort), "non-covid") ~ "cross-reactive",
       TRUE ~ NA_character_
     ),
     # Result

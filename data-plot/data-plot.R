@@ -9,6 +9,13 @@ data_plot_dir <- "data-plot"
 
 source(file.path(data_dir, "read_data.R"))
 
+create_group_lbl <- function(group, symptom_onset_cat) {
+  if_else(
+    group == "covid", as.character(symptom_onset_cat), group
+  ) %>%
+    factor(c("<7", "7-14", ">14", "cross-reactive", "population"))
+}
+
 save_plot <- function(plot, name, ...) {
   ggdark::ggsave_dark(
     file.path(data_plot_dir, paste0(name, ".png")),
@@ -21,12 +28,7 @@ save_plot <- function(plot, name, ...) {
 
 data <- read_data("data") %>%
   filter(!assay %in% c("svnt-20", "svnt-25")) %>%
-  mutate(
-    group_lbl = if_else(
-      group == "covid", as.character(symptom_onset_cat), group
-    ) %>%
-      factor(c("<7", "7-14", ">14", "non-covid", "healthy"))
-  )
+  mutate(group_lbl = create_group_lbl(group, symptom_onset_cat))
 
 boxplots <- data %>%
   filter(!is.na(symptom_onset_cat)) %>%
@@ -77,10 +79,6 @@ data_heat <- data %>%
   filter(discordant) %>%
   mutate(
     id = reorder(id, total),
-    group_lbl = if_else(
-      group == "covid", as.character(symptom_onset_cat), group
-    ) %>%
-      factor(c("<7", "7-14", ">14", "non-covid", "healthy")),
     result = recode(result, "pos" = "Positive", "neg" = "Negative")
   )
 

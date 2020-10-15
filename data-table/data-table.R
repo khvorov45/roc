@@ -25,24 +25,6 @@ data <- read_data("data")
 data_no_svnt_extra <- data %>%
   filter(!assay %in% c("svnt-20", "svnt-25"))
 
-onset_assay_counts <- data_no_svnt_extra %>%
-  count(assay, symptom_onset_cat) %>%
-  pivot_wider(names_from = "assay", values_from = "n")
-
-save_data(onset_assay_counts, "onset-assay-counts")
-
-f <- function(x) paste(x, collapse = " ")
-assay_discrepancies <- data_no_svnt_extra %>%
-  group_by(id, group) %>%
-  summarise(tibble(
-    pos = f(assay[result == "pos"]),
-    neg = f(assay[result == "neg"])
-  ), .groups = "drop") %>%
-  count(pos, neg, group, name = "count") %>%
-  arrange(group, desc(count))
-
-save_data(assay_discrepancies, "assay-discrepancies")
-
 # Assay samples vs unique individuals
 s <- function(data) {
   data %>%
@@ -76,12 +58,12 @@ assay_counts <- bind_rows(
     subset,
     c(
       "<7", "7-14", ">14", "covid",
-      "healthy", "non-covid", "no infection",
+      "population", "cross-reactive", "no infection",
       "combined"
     ),
     c(
       "<7", "7-14", ">14", "covid total",
-      "healthy", "non-covid infection", "no covid total",
+      "population", "cross-reactive", "no covid total",
       "overall total"
     )
   )) %>%

@@ -40,8 +40,6 @@ rule data_table:
         "data/data.csv",
         "data/read_data.R",
     output:
-        "data-table/onset-assay-counts.csv",
-        "data-table/assay-discrepancies.csv",
         "data-table/assay-counts.csv",
     shell:
         "Rscript data-table/data-table.R"

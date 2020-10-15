@@ -102,7 +102,7 @@ prevs <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
 pred_vals <- sens %>%
   inner_join(
     spec %>%
-      filter(group == "healthy") %>%
+      filter(group == "population") %>%
       select(assay, spec_low = low, spec_point = point, spec_high = high),
     by = "assay"
   ) %>%
