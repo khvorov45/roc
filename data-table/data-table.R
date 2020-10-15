@@ -9,8 +9,6 @@ data_table_dir <- "data-table"
 
 source(file.path(data_dir, "read_data.R"))
 
-source(file.path(data_dir, "calc_result_one_threshold.R"))
-
 save_data <- function(data, name) {
   write_csv(
     data,
@@ -31,7 +29,6 @@ save_data(onset_assay_counts, "onset-assay-counts")
 
 f <- function(x) paste(x, collapse = " ")
 assay_discrepancies <- data %>%
-  calc_result_one_threshold() %>%
   group_by(id, group) %>%
   summarise(tibble(
     pos = f(assay[result == "pos"]),
