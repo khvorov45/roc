@@ -93,9 +93,9 @@ all_data_mod <- all_data %>%
     group = case_when(
       str_detect(tolower(cohort), "pcr pos") ~ "covid",
       str_detect(tolower(cohort), "healthy control") ~ "healthy",
-      str_detect(tolower(cohort), "corona") ~ "corona",
       str_detect(tolower(cohort), "negative control") ~ "healthy",
       str_detect(tolower(cohort), "neg control") ~ "healthy",
+      str_detect(tolower(cohort), "corona") ~ "non-covid",
       str_detect(tolower(cohort), "non-covid") ~ "non-covid",
       TRUE ~ NA_character_
     ),
@@ -200,34 +200,31 @@ all_data_covid_firsts <- all_data_fixids %>%
   filter(group != "covid" | symptom_onset_days == min(symptom_onset_days)) %>%
   ungroup()
 
-# For id's that appear in seasonal corona and non-covid, keep only the
-# seasonal corona
-all_data_only_seas_corona <- all_data_covid_firsts %>%
-  group_by(id, assay, symptom_onset_cat) %>%
-  filter(n() == 1 | (!"corona" %in% group | group == "corona")) %>%
-  filter(n() == 1 | (!"non-covid" %in% group | group == "non-covid")) %>%
-  ungroup() %>%
-  mutate(
-    group = recode(group, "corona" = "non-covid")
-  )
-
 # Look for multiple measurement from the same individual for the same assay
-length(unique(all_data_only_seas_corona$id)) # Total unique individuals
+length(unique(all_data_covid_firsts$id)) # Total unique individuals
 
 # Number of individuals that provided more than 1 measurement per assay
-all_data_only_seas_corona %>%
+all_data_covid_firsts %>%
   count(id, assay, symptom_onset_cat, group, name = "n_samples") %>%
   filter(n_samples > 1) %>%
   group_by(id, n_samples, group) %>%
-  summarise(n_assays = paste(assay, collapse = " "), .groups = "drop") %>%
+  summarise(assays = paste(assay, collapse = " "), .groups = "drop") %>%
+  # pull(id) -> bad_ids
   print(n = 50)
+
+# walk(bad_ids, ~ all_data_covid_firsts %>% filter(id == .x) %>% print())
 
 # At this point just keep the first observation for everyone
 
-all_data_one_ind <- all_data_only_seas_corona %>%
-  group_by(id, assay, symptom_onset_cat) %>%
+all_data_one_ind <- all_data_covid_firsts %>%
+  group_by(id, assay, symptom_onset_cat, group) %>%
   filter(row_number() == 1) %>%
   ungroup()
+
+# Shouldn't be any bad ids
+all_data_one_ind %>%
+  count(id, assay, symptom_onset_cat, group) %>%
+  filter(n > 1)
 
 # Add the two extra assays - svnt 1st observation at 20 and svnt 1st observation
 # at 25
