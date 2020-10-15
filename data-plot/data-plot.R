@@ -95,7 +95,7 @@ heatmap <- data_heat %>%
   theme(
     legend.position = "bottom",
   ) +
-  scale_fill_manual("Test result", values = c("#d9e2f3", "#fbe4d5")) +
+  scale_fill_manual("Test result", values = c("#88b1ff", "#ffb380")) +
   scale_y_discrete("Sample id", expand = expansion()) +
   scale_x_discrete("Assay", expand = expansion()) +
   geom_tile(aes(fill = result)) +
