@@ -33,7 +33,8 @@ euro_ncp <- read_raw("euro-ncp", range = "A2:L319") %>%
     cohort = notes,
     measurement = Index,
     symptom_onset_days,
-    result = Interpretation
+    result = Interpretation,
+    diag = Diagnosis,
   ) %>%
   mutate(assay = "euro_ncp")
 
@@ -47,7 +48,8 @@ euro_s1 <- read_raw("euro-s1", range = "A2:T308") %>%
     result_igg = Interpretation_igg,
     result_iga = Interpretation_iga,
     result_iga_new = Interpretation_iga_new,
-    symptom_onset_days
+    symptom_onset_days,
+    diag = Diagnosis,
   ) %>%
   lengthen_measurement("euro")
 
@@ -57,7 +59,8 @@ svnt <- read_raw("svnt", range = "A3:L444") %>%
     cohort = notes,
     measurement = `% Inhib`,
     result = `sVNT Int.`,
-    symptom_onset_days
+    symptom_onset_days,
+    diag = Diagnosis,
   ) %>%
   mutate(assay = "svnt")
 
@@ -69,7 +72,8 @@ wantai <- read_raw("wantai", range = "B3:O349") %>%
     measurement_igm = sco_igm,
     result_tot = interpret_tot,
     result_igm = interpret_igm,
-    symptom_onset_days
+    symptom_onset_days,
+    diag,
   ) %>%
   lengthen_measurement("wantai")
 
@@ -86,6 +90,7 @@ unique(all_data$cohort)
 unique(all_data$symptom_onset_days)
 unique(all_data$assay)
 unique(all_data$result)
+unique(all_data$diag)
 
 all_data_mod <- all_data %>%
   mutate(
