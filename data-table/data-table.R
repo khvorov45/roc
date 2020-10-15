@@ -18,17 +18,21 @@ save_data <- function(data, name) {
 
 # Script ======================================================================
 
-data <- read_data("data") %>%
+data <- read_data("data")
+
+# Counts ----------------------------------------------------------------------
+
+data_no_svnt_extra <- data %>%
   filter(!assay %in% c("svnt-20", "svnt-25"))
 
-onset_assay_counts <- data %>%
+onset_assay_counts <- data_no_svnt_extra %>%
   count(assay, symptom_onset_cat) %>%
   pivot_wider(names_from = "assay", values_from = "n")
 
 save_data(onset_assay_counts, "onset-assay-counts")
 
 f <- function(x) paste(x, collapse = " ")
-assay_discrepancies <- data %>%
+assay_discrepancies <- data_no_svnt_extra %>%
   group_by(id, group) %>%
   summarise(tibble(
     pos = f(assay[result == "pos"]),
@@ -46,20 +50,20 @@ s <- function(data) {
     summarise(
       n_indiv = length(unique(id)),
       n_samples = n(),
-      summary = glue::glue("{n_samples}"),
+      summary = glue::glue("{n_samples} ({n_indiv})"),
       .groups = "drop"
     ) %>%
     select(-n_indiv, -n_samples)
 }
-assay_counts_onsets <- data %>%
+assay_counts_onsets <- data_no_svnt_extra %>%
   group_by(assay, symptom_onset_cat) %>%
   s() %>%
   rename(subset = symptom_onset_cat)
-assay_counts_group <- data %>%
+assay_counts_group <- data_no_svnt_extra %>%
   group_by(assay, group) %>%
   s() %>%
   rename(subset = group)
-assay_counts_overall <- data %>%
+assay_counts_overall <- data_no_svnt_extra %>%
   group_by(assay) %>%
   s() %>%
   mutate(subset = "combined")
