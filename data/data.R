@@ -89,14 +89,17 @@ unique(all_data$result)
 
 all_data_mod <- all_data %>%
   mutate(
+    # Group from cohort
     group = case_when(
       str_detect(tolower(cohort), "pcr pos") ~ "covid",
       str_detect(tolower(cohort), "healthy control") ~ "healthy",
       str_detect(tolower(cohort), "corona") ~ "corona",
-      str_detect(tolower(cohort), "negative control") ~ "neg-control",
-      str_detect(tolower(cohort), "neg control") ~ "neg-control",
-      TRUE ~ "non-covid"
+      str_detect(tolower(cohort), "negative control") ~ "healthy",
+      str_detect(tolower(cohort), "neg control") ~ "healthy",
+      str_detect(tolower(cohort), "non-covid") ~ "non-covid",
+      TRUE ~ NA_character_
     ),
+    # Result
     result = tolower(result) %>%
       str_replace_all("^equ$", "equiv") %>%
       str_replace_all("/equ$", "/equiv") %>%
@@ -118,6 +121,10 @@ all_data_mod <- all_data %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & group != "covid")) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga"))
+
+# Shouldn't be any missing groups
+all_data_mod %>%
+  filter(is.na(group))
 
 # Replace onset days for some covids with the newly provided
 onset <- read_raw("onset") %>%
@@ -201,7 +208,7 @@ all_data_only_seas_corona <- all_data_covid_firsts %>%
   filter(n() == 1 | (!"non-covid" %in% group | group == "non-covid")) %>%
   ungroup() %>%
   mutate(
-    group = recode(group, "corona" = "non-covid", "neg-control" = "non-covid")
+    group = recode(group, "corona" = "non-covid")
   )
 
 # Look for multiple measurement from the same individual for the same assay
