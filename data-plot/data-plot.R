@@ -71,14 +71,19 @@ boxplots <- data %>%
 
 save_plot(boxplots, "boxplots", width = 20, height = 15)
 
-# Heatmap of results
+# Heatmap of results ----------------------------------------------------------
+
 data_heat <- data %>%
   group_by(id) %>%
-  mutate(discordant = length(unique(result)) > 1, total = length(result)) %>%
+  mutate(
+    id_deid = paste(cur_group_id()),
+    discordant = length(unique(result)) > 1, total = length(result)
+  ) %>%
   ungroup() %>%
   filter(discordant) %>%
   mutate(
     id = reorder(id, total),
+    id_deid = reorder(id_deid, total),
     result = recode(result, "pos" = "Positive", "neg" = "Negative")
   )
 
@@ -87,31 +92,41 @@ counts <- data_heat %>%
   pivot_wider(names_from = "assay", values_from = "measurement") %>%
   count(group_lbl)
 
-heatmap <- data_heat %>%
-  ggplot(aes(assay, id)) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom",
-  ) +
-  scale_fill_manual("Test result", values = c("#88b1ff", "#ffb380")) +
-  scale_y_discrete("Sample id", expand = expansion()) +
-  scale_x_discrete("Assay", expand = expansion()) +
-  geom_tile(aes(fill = result)) +
-  geom_text(aes(label = signif(measurement, 2)), col = "black") +
-  facet_wrap(
-    ~group_lbl,
-    ncol = 1, scales = "free_y", strip.position = "right"
-  )
+gen_heatmap <- function(data, id_var) {
+  data_heat %>%
+    ggplot(aes(assay, !!rlang::sym(id_var))) +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+    ) +
+    scale_fill_manual("Test result", values = c("#88b1ff", "#ffb380")) +
+    scale_y_discrete("Sample id", expand = expansion()) +
+    scale_x_discrete("Assay", expand = expansion()) +
+    geom_tile(aes(fill = result)) +
+    geom_text(aes(label = signif(measurement, 2)), col = "black") +
+    facet_wrap(
+      ~group_lbl,
+      ncol = 1, scales = "free_y", strip.position = "right"
+    )
+}
+
+heatmap <- gen_heatmap(data_heat, "id")
+heatmap_deid <- gen_heatmap(data_heat, "id_deid")
 
 # Adjust the facet size like a psychopath
 
-png(
-  file.path(data_plot_dir, "heatmap-discordant.png"),
-  width = 20, height = 30, units = "cm", res = 150
-)
-gt <- ggplot_gtable(ggplot_build(heatmap))
-for (i in seq_along(counts$n)) {
-  gt$heights[7 + (i - 1) * 4] <- unit(counts$n[[i]], "null")
+save_heatmap <- function(plot, name) {
+  png(
+    file.path(data_plot_dir, paste0(name, ".png")),
+    width = 20, height = 30, units = "cm", res = 150
+  )
+  gt <- ggplot_gtable(ggplot_build(plot))
+  for (i in seq_along(counts$n)) {
+    gt$heights[7 + (i - 1) * 4] <- unit(counts$n[[i]], "null")
+  }
+  grid::grid.draw(gt)
+  dev.off()
 }
-grid::grid.draw(gt)
-dev.off()
+
+save_heatmap(heatmap, "heatmap-discordant")
+save_heatmap(heatmap_deid, "heatmap-discordant-deid")

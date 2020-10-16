@@ -30,6 +30,7 @@ rule data_plot:
     output:
         "data-plot/boxplots.png",
         "data-plot/heatmap-discordant.png",
+        "data-plot/heatmap-discordant-deid.png",
     shell:
         "Rscript data-plot/data-plot.R"
 
