@@ -74,7 +74,7 @@ save_plot(boxplots, "boxplots", width = 20, height = 15)
 # Heatmap of results ----------------------------------------------------------
 
 data_heat <- data %>%
-  group_by(id) %>%
+  group_by(id, group, symptom_onset_cat) %>%
   mutate(
     id_deid = paste(cur_group_id()),
     discordant = length(unique(result)) > 1, total = length(result)
