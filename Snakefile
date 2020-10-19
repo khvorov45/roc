@@ -58,6 +58,12 @@ rule roc:
         "roc/assay-comp-sens.csv",
         "roc/assay-comp-spec.csv",
         "roc/assay-comp-predvals.csv",
+        "roc/svnt-sens.png",
+        "roc/svnt-spec.png",
+        "roc/svnt-predvals.png",
+        "roc/svnt-sens.csv",
+        "roc/svnt-spec.csv",
+        "roc/svnt-predvals.csv",
     shell:
         "Rscript roc/roc.R"
 
