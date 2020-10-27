@@ -15,6 +15,7 @@ rule data:
         "data-raw/svnt.xlsx",
         "data-raw/wantai.xlsx",
         "data-raw/onset.xlsx",
+        "data-raw/more-results.xlsx",
     output:
         "data/data.csv"
     shell:
