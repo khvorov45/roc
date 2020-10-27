@@ -77,8 +77,36 @@ wantai <- read_raw("wantai", range = "B3:O349") %>%
   ) %>%
   lengthen_measurement("wantai")
 
+more_results <- read_raw("more-results", range = "A4:AB77") %>%
+  select(
+    id = ID,
+    symptom_onset_days = `Days post symptom onset`,
+    measurement_euro_iga = euro_iga_Index,
+    result_euro_iga = euro_iga_result,
+    measurement_euro_igg = euro_igg_Index,
+    result_euro_igg = euro_igg_result,
+    measurement_euro_ncp = euro_ncp_Index,
+    result_euro_ncp = euro_ncp_result,
+    measurement_svnt = `svnt_% Inhib`,
+    result_svnt_1 = svnt_first_result,
+    result_svnt_2 = svnt_add_result,
+  ) %>%
+  mutate(
+    result_svnt = if_else(is.na(result_svnt_2), result_svnt_1, result_svnt_2)
+  ) %>%
+  select(-result_svnt_1, -result_svnt_2) %>%
+  lengthen_measurement("") %>%
+  mutate(
+    cohort = "pcr pos",
+    diag = "SARS-CoV-2",
+    assay = str_replace(assay, "^_", "")
+  )
+
+# No missing data is expected in extra results
+any(!complete.cases(more_results))
+
 # Unite them
-all_data <- bind_rows(list(euro_ncp, euro_s1, svnt, wantai)) %>%
+all_data <- bind_rows(list(euro_ncp, euro_s1, svnt, wantai, more_results)) %>%
   filter(!is.na(measurement))
 
 # There shouldn't be any missing results
@@ -105,6 +133,7 @@ all_data_mod <- all_data %>%
       TRUE ~ NA_character_
     ),
     # Result
+    result_og = result,
     result = tolower(result) %>%
       str_replace_all("^equ$", "equiv") %>%
       str_replace_all("/equ$", "/equiv") %>%
@@ -126,6 +155,9 @@ all_data_mod <- all_data %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & group != "covid")) %>%
   mutate(assay = recode(assay, "euro_iga_new" = "euro_iga"))
+
+count(all_data_mod, result_og, result) %>% print(n = 50)
+count(all_data_mod, group, cohort) %>% print(n = 50)
 
 # Shouldn't be any missing groups
 all_data_mod %>%
@@ -151,12 +183,18 @@ unique(old_onset$symptom_onset_days)
 
 old_onset_fixed <- old_onset %>%
   mutate(
+    symptom_onset_og = symptom_onset_days,
     symptom_onset_days = suppressWarnings(symptom_onset_days %>%
       str_replace("[+|>]", "") %>%
       as.integer(.))
   )
 
-all_data_new_onset <- bind_rows(new_onset, old_onset_fixed) %>%
+count(old_onset_fixed, symptom_onset_og, symptom_onset_days) %>%
+  print(n = 100)
+
+all_data_new_onset <- bind_rows(
+  new_onset, select(old_onset_fixed, -symptom_onset_og)
+) %>%
   # Can't use covids with missing onset
   filter(!(group == "covid" & is.na(symptom_onset_days)))
 
@@ -170,6 +208,9 @@ all_data_onset_cats <- all_data_new_onset %>%
       group != "covid" ~ "no infection",
     )
   )
+
+count(all_data_onset_cats, symptom_onset_days, symptom_onset_cat) %>%
+  print(n = 50)
 
 # Shouldn't be any missing symptom onset category
 all_data_onset_cats %>%
