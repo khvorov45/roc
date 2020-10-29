@@ -104,7 +104,7 @@ save_data <- function(data, name) {
 data <- read_data("data")
 
 # Prevalences to evaluate predictive values at
-prevs <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.2)
+prevs <- c(0.001, 0.0011, 0.0032, 0.005, 0.01, 0.05, 0.1, 0.2)
 
 # Sensitivity and specificity -------------------------------------------------
 
@@ -199,7 +199,10 @@ predvals_plot <- pred_vals %>%
     )
   ) +
   theme(strip.placement = "outside", axis.title.y = element_blank())
-save_plot(predvals_plot, "assay-comp-predvals", width = 25, height = 25)
+save_plot(
+  predvals_plot, "assay-comp-predvals",
+  width = length(prevs) * 5, height = 25
+)
 
 # Try various thresholds for svnt ---------------------------------------------
 
@@ -330,4 +333,6 @@ pred_vals_res_plot <- pred_vals_res %>%
   theme(strip.placement = "outside", axis.title.y = element_blank()) +
   special_pointranges(pred_vals_res)
 
-save_plot(pred_vals_res_plot, "svnt-predvals", width = 25, height = 25)
+save_plot(
+  pred_vals_res_plot, "svnt-predvals", width = length(prevs) * 5, height = 25
+)
