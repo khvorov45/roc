@@ -329,18 +329,18 @@ euro_svnt_mn <- read_raw("euro-svnt-mn", range = "A2:U112") %>%
   select(
     id,
     mn = mn_result, euro_iga = iga_res, euro_igg = igg_result,
-    ncp = ncp_result, svnt_20 = svnt_result,
+    euro_ncp = ncp_result, `svnt-20` = svnt_result,
     svnt = svnt_result_2, svnt_inh,
     days_onset = `onset days`, group = Group,
   ) %>%
   filter(!is.na(mn)) %>%
   mutate(
-    svnt = if_else(is.na(svnt), svnt_20, svnt),
-    svnt_25 = if_else(svnt_inh < 25, "neg", "pos")
+    svnt = if_else(is.na(svnt), `svnt-20`, svnt),
+    `svnt-25` = if_else(svnt_inh < 25, "neg", "pos")
   ) %>%
   select(-svnt_inh) %>%
   pivot_longer(
-    c(euro_iga, euro_igg, ncp, svnt, svnt_20, svnt_25),
+    c(contains("euro"), contains("svnt")),
     names_to = "assay", values_to = "result"
   )
 
