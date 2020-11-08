@@ -317,7 +317,7 @@ wantai_mn <- read_raw("wantai-mn", range = "A2:R117") %>%
   select(
     id,
     mn = result, wantai_tot = total_result, wantai_igm = igm_result,
-    days_onset = `onset days`, group = cohort,
+    days_onset = `onset days`, group_og = cohort,
   ) %>%
   filter(!is.na(mn)) %>%
   pivot_longer(
@@ -331,7 +331,7 @@ euro_svnt_mn <- read_raw("euro-svnt-mn", range = "A2:U112") %>%
     mn = mn_result, euro_iga = iga_res, euro_igg = igg_result,
     euro_ncp = ncp_result, `svnt-20` = svnt_result,
     svnt = svnt_result_2, svnt_inh,
-    days_onset = `onset days`, group = Group,
+    days_onset = `onset days`, group_og = Group,
   ) %>%
   filter(!is.na(mn)) %>%
   mutate(
@@ -347,7 +347,7 @@ euro_svnt_mn <- read_raw("euro-svnt-mn", range = "A2:U112") %>%
 mn_all <- bind_rows(wantai_mn, euro_svnt_mn) %>%
   filter(!is.na(result)) %>%
   mutate(
-    group_fixed = fix_group(group),
+    group_fixed = fix_group(group_og),
     result = fix_result(result),
     days_onset_fixed = fix_days_onset(days_onset),
     symptom_onset_cat = categorise_onset(days_onset_fixed, group_fixed),
@@ -355,11 +355,12 @@ mn_all <- bind_rows(wantai_mn, euro_svnt_mn) %>%
 
 # Check fixes
 unique(mn_all$mn)
-mn_all %>% count(group, group_fixed)
+mn_all %>% count(group_og, group_fixed)
 mn_all %>%
   count(days_onset, days_onset_fixed, symptom_onset_cat, group_fixed) %>%
   print(n = 100)
 
-mn_final <- mn_all %>% select(id, group, mn, symptom_onset_cat, assay, result)
+mn_final <- mn_all %>%
+  select(id, group = group_fixed, mn, symptom_onset_cat, assay, result)
 
 save_data(mn_final, "mn")
