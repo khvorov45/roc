@@ -8,7 +8,8 @@ read_data <- function(name) {
         "svnt", "svnt-20", "svnt-25",
         "wantai_igm", "wantai_tot"
       )),
-      symptom_onset_cat = col_factor(c("<7", "7-14", ">14", "no infection"))
+      symptom_onset_cat = col_factor(c("<7", "7-14", ">14", "no infection")),
+      group = col_factor(c("covid", "population", "cross-reactive"))
     )
   )
 }
