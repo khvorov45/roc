@@ -25,6 +25,58 @@ save_data <- function(data, name) {
   write_csv(data, file.path(data_dir, paste0(name, ".csv")))
 }
 
+fix_result <- function(result) {
+  tolower(result) %>%
+    str_replace_all("^equ$", "equiv") %>%
+    str_replace_all("/equ$", "/equiv") %>%
+    str_replace_all("/equ/", "/equiv/") %>%
+    str_replace_all("^eqiv$", "equiv") %>%
+    str_replace_all("equiv", "pos") %>%
+    str_replace_all("p0s", "pos") %>%
+    str_replace_all("pospos", "pos/pos") %>%
+    str_replace_all("([[:alpha:]]{3})x2", "\\1/\\1") %>%
+    map(., ~ str_split(.x, "/")) %>%
+    map(flatten) %>%
+    map_chr(
+      .,
+      function(res_vec) {
+        if (sum(res_vec == "pos") > sum(res_vec == "neg")) "pos" else "neg"
+      }
+    )
+}
+
+fix_days_onset <- function(onset) {
+  onset %>%
+    str_replace("[+|>]", "") %>%
+    as.integer()
+}
+
+categorise_onset <- function(onset, group) {
+  case_when(
+    onset < 7 ~ "<7",
+    onset <= 14 ~ "7-14",
+    onset > 14 ~ ">14",
+    group != "covid" ~ "no infection",
+  )
+}
+
+fix_group <- function(group) {
+  group <- tolower(group)
+  case_when(
+    str_detect(group, "pcr pos") ~ "covid",
+    str_detect(group, "pos pcr") ~ "covid",
+    str_detect(group, "healthy control") ~ "population",
+    str_detect(group, "negative control") ~ "population",
+    str_detect(group, "neg control") ~ "population",
+    str_detect(group, "neg pop") ~ "population",
+    str_detect(group, "corona") ~ "cross-reactive",
+    str_detect(group, "non-covid") ~ "cross-reactive",
+    str_detect(group, "cross reac") ~ "cross-reactive",
+    str_detect(group, "mers") ~ "cross-reactive",
+    TRUE ~ NA_character_
+  )
+}
+
 # Script ======================================================================
 
 euro_ncp <- read_raw("euro-ncp", range = "A2:L319") %>%
@@ -123,34 +175,10 @@ unique(all_data$diag)
 all_data_mod <- all_data %>%
   mutate(
     # Group from cohort
-    group = case_when(
-      str_detect(tolower(cohort), "pcr pos") ~ "covid",
-      str_detect(tolower(cohort), "healthy control") ~ "population",
-      str_detect(tolower(cohort), "negative control") ~ "population",
-      str_detect(tolower(cohort), "neg control") ~ "population",
-      str_detect(tolower(cohort), "corona") ~ "cross-reactive",
-      str_detect(tolower(cohort), "non-covid") ~ "cross-reactive",
-      TRUE ~ NA_character_
-    ),
+    group = fix_group(cohort),
     # Result
     result_og = result,
-    result = tolower(result) %>%
-      str_replace_all("^equ$", "equiv") %>%
-      str_replace_all("/equ$", "/equiv") %>%
-      str_replace_all("/equ/", "/equiv/") %>%
-      str_replace_all("^eqiv$", "equiv") %>%
-      str_replace_all("equiv", "pos") %>%
-      str_replace_all("p0s", "pos") %>%
-      str_replace_all("pospos", "pos/pos") %>%
-      str_replace_all("([[:alpha:]]{3})x2", "\\1/\\1") %>%
-      map(., ~ str_split(.x, "/")) %>%
-      map(flatten) %>%
-      map_chr(
-        .,
-        function(res_vec) {
-          if (sum(res_vec == "pos") > sum(res_vec == "neg")) "pos" else "neg"
-        }
-      ),
+    result = fix_result(result),
   ) %>%
   # Remove old iga for the non-covids since we are not interested in it
   filter(!(assay == "euro_iga" & group != "covid")) %>%
@@ -184,9 +212,7 @@ unique(old_onset$symptom_onset_days)
 old_onset_fixed <- old_onset %>%
   mutate(
     symptom_onset_og = symptom_onset_days,
-    symptom_onset_days = suppressWarnings(symptom_onset_days %>%
-      str_replace("[+|>]", "") %>%
-      as.integer(.))
+    symptom_onset_days = suppressWarnings(fix_days_onset(symptom_onset_days))
   )
 
 count(old_onset_fixed, symptom_onset_og, symptom_onset_days) %>%
@@ -200,14 +226,7 @@ all_data_new_onset <- bind_rows(
 
 # Create onset categories
 all_data_onset_cats <- all_data_new_onset %>%
-  mutate(
-    symptom_onset_cat = case_when(
-      symptom_onset_days < 7 ~ "<7",
-      symptom_onset_days <= 14 ~ "7-14",
-      symptom_onset_days > 14 ~ ">14",
-      group != "covid" ~ "no infection",
-    )
-  )
+  mutate(symptom_onset_cat = categorise_onset(symptom_onset_days, group))
 
 count(all_data_onset_cats, symptom_onset_days, symptom_onset_cat) %>%
   print(n = 50)
@@ -291,3 +310,56 @@ all_data_final <- all_data_svnt_extra %>%
   select(id, group, symptom_onset_cat, assay, measurement, result)
 
 save_data(all_data_final, "data")
+
+# MN data =====================================================================
+
+wantai_mn <- read_raw("wantai-mn", range = "A2:R117") %>%
+  select(
+    id,
+    mn = result, wantai_tot = total_result, wantai_igm = igm_result,
+    days_onset = `onset days`, group = cohort,
+  ) %>%
+  filter(!is.na(mn)) %>%
+  pivot_longer(
+    c(wantai_tot, wantai_igm),
+    names_to = "assay", values_to = "result"
+  )
+
+euro_svnt_mn <- read_raw("euro-svnt-mn", range = "A2:U112") %>%
+  select(
+    id,
+    mn = mn_result, euro_iga = iga_res, euro_igg = igg_result,
+    ncp = ncp_result, svnt_20 = svnt_result,
+    svnt = svnt_result_2, svnt_inh,
+    days_onset = `onset days`, group = Group,
+  ) %>%
+  filter(!is.na(mn)) %>%
+  mutate(
+    svnt = if_else(is.na(svnt), svnt_20, svnt),
+    svnt_25 = if_else(svnt_inh < 25, "neg", "pos")
+  ) %>%
+  select(-svnt_inh) %>%
+  pivot_longer(
+    c(euro_iga, euro_igg, ncp, svnt, svnt_20, svnt_25),
+    names_to = "assay", values_to = "result"
+  )
+
+mn_all <- bind_rows(wantai_mn, euro_svnt_mn) %>%
+  filter(!is.na(result)) %>%
+  mutate(
+    group_fixed = fix_group(group),
+    result = fix_result(result),
+    days_onset_fixed = fix_days_onset(days_onset),
+    symptom_onset_cat = categorise_onset(days_onset_fixed, group_fixed),
+  )
+
+# Check fixes
+unique(mn_all$mn)
+mn_all %>% count(group, group_fixed)
+mn_all %>%
+  count(days_onset, days_onset_fixed, symptom_onset_cat, group_fixed) %>%
+  print(n = 100)
+
+mn_final <- mn_all %>% select(id, group, mn, symptom_onset_cat, assay, result)
+
+save_data(mn_final, "mn")
