@@ -9,11 +9,37 @@ data_table_dir <- "data-table"
 
 source(file.path(data_dir, "read_data.R"))
 
+summarise_binary <- function(bin_vec) {
+  fmt <- function(x) glue::glue("{signif(x * 100, 2)}%")
+  n <- length(bin_vec)
+  s <- sum(bin_vec)
+  f <- n - s
+  p <- s / n
+  ci <- PropCIs::exactci(s, n, 0.95)$conf.int
+  tibble(
+    total = n,
+    success = s,
+    failure = f,
+    prop = p,
+    low = ci[[1]],
+    high = ci[[2]],
+    summary = glue::glue("{fmt(p)} ({fmt(low)}, {fmt(high)}) [{s} / {n}]")
+  )
+}
+
+merge_groups <- function(onset, group) {
+  onset_chr <- as.character(onset)
+  group_chr <- as.character(group)
+  if_else(group_chr == "covid", onset_chr, group_chr) %>%
+    factor(levels = c(levels(onset), levels(group)))
+}
+
 save_data <- function(data, name) {
   write_csv(
     data,
     file.path(data_table_dir, paste0(name, ".csv")),
   )
+  data
 }
 
 # Script ======================================================================
@@ -70,3 +96,17 @@ assay_counts <- bind_rows(
   arrange(subset)
 
 save_data(assay_counts, "assay-counts")
+
+# MN validation ---------------------------------------------------------------
+
+mn <- read_data("mn")
+
+mn_summ <- mn %>%
+  group_by(assay, symptom_onset_cat, group) %>%
+  summarise(summarise_binary(result == mn), .groups = "drop")
+
+mn_summ %>%
+  mutate(group_lbl = merge_groups(symptom_onset_cat, group)) %>%
+  select(assay, group_lbl, summary) %>%
+  pivot_wider(names_from = "assay", values_from = "summary") %>%
+  save_data("mn-agreement")
