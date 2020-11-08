@@ -17,7 +17,8 @@ rule data:
         "data-raw/onset.xlsx",
         "data-raw/more-results.xlsx",
     output:
-        "data/data.csv"
+        "data/data.csv",
+        "data/mn.csv",
     shell:
         "Rscript data/data.R"
 
@@ -39,9 +40,11 @@ rule data_table:
         ".deps-installed",
         "data-table/data-table.R",
         "data/data.csv",
+        "data/mn.csv",
         "data/read_data.R",
     output:
         "data-table/assay-counts.csv",
+        "data-table/mn-agreement.csv",
     shell:
         "Rscript data-table/data-table.R"
 
