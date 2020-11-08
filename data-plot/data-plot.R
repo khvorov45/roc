@@ -11,9 +11,9 @@ source(file.path(data_dir, "read_data.R"))
 
 create_group_lbl <- function(group, symptom_onset_cat) {
   if_else(
-    group == "covid", as.character(symptom_onset_cat), group
+    group == "covid", as.character(symptom_onset_cat), as.character(group)
   ) %>%
-    factor(c("<7", "7-14", ">14", "cross-reactive", "population"))
+    factor(c(levels(symptom_onset_cat), levels(group)))
 }
 
 save_plot <- function(plot, name, ...) {
