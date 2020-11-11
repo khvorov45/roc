@@ -9,8 +9,12 @@ data_table_dir <- "data-table"
 
 source(file.path(data_dir, "read_data.R"))
 
+format_percent <- function(p, l, h) {
+  f <- function(x) glue::glue("{signif(x * 100, 2)}%")
+  glue::glue("{f(p)} ({f(l)}, {f(h)})")
+}
+
 summarise_binary <- function(bin_vec) {
-  fmt <- function(x) glue::glue("{signif(x * 100, 2)}%")
   n <- length(bin_vec)
   s <- sum(bin_vec)
   f <- n - s
@@ -23,7 +27,7 @@ summarise_binary <- function(bin_vec) {
     prop = p,
     low = ci[[1]],
     high = ci[[2]],
-    summary = glue::glue("{fmt(p)} ({fmt(low)}, {fmt(high)}) [{s} / {n}]")
+    summary = glue::glue("{format_percent(prop, low, high)} [{s} / {n}]")
   )
 }
 
@@ -101,12 +105,25 @@ save_data(assay_counts, "assay-counts")
 
 mn <- read_data("mn")
 
-mn_summ <- mn %>%
+mn_summ_indiv_groups <- mn %>%
   group_by(assay, symptom_onset_cat, group) %>%
   summarise(summarise_binary(result == mn), .groups = "drop")
+
+mn_summ_onset_averaged <- mn_summ_indiv_groups %>%
+  filter(group == "covid") %>%
+  group_by(group, assay) %>%
+  summarise(
+    symptom_onset_cat = factor("onset-averaged"),
+    across(c(prop, low, high), mean),
+    summary = format_percent(prop, low, high),
+    .groups = "drop"
+  )
+
+mn_summ <- bind_rows(mn_summ_indiv_groups, mn_summ_onset_averaged)
 
 mn_summ %>%
   mutate(group_lbl = merge_groups(symptom_onset_cat, group)) %>%
   select(assay, group_lbl, summary) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
+  arrange(group_lbl) %>%
   save_data("mn-agreement")
