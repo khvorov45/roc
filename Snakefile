@@ -36,6 +36,7 @@ rule data_summary:
         "data-summary/heatmap-discordant-deid.png",
         "data-summary/assay-counts.csv",
         "data-summary/mn-agreement.csv",
+        "data-summary/mn-agreement.png",
     shell:
         "Rscript data-summary/data-summary.R"
 

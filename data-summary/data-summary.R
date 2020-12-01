@@ -262,3 +262,18 @@ mn_summ %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
   arrange(group_lbl) %>%
   save_data("mn-agreement")
+
+mn_summ_plot <- mn_summ %>%
+  ggplot(aes(short, group_lbl)) +
+  ggdark::dark_theme_bw(verbose = FALSE) +
+  theme(
+    panel.border = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  scale_fill_viridis_c("Agreement", labels = scales::percent_format()) +
+  scale_x_discrete("Assay") +
+  scale_y_discrete("Group", labels = as_labeller(tools::toTitleCase)) +
+  geom_tile(aes(fill = prop)) +
+  geom_text(aes(label = paste0(round(prop * 100), "%")))
+
+save_plot(mn_summ_plot, "mn-agreement", width = 18, height = 10)
