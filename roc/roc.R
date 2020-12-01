@@ -366,7 +366,7 @@ pred_vals_res_plot <- pred_vals_res %>%
     labeller = labeller(
       char = toupper,
       prev = function(prev) glue::glue("Prevalence {as.numeric(prev) * 100}%"),
-      symptom_onset_cat = tools::toTitleCase,
+      symptom_onset_cat = tools::toTitleCase
     )
   ) +
   theme(strip.placement = "outside", axis.title.y = element_blank()) +
