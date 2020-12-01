@@ -58,7 +58,10 @@ boxplots <- data %>%
     strip.background = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
   ) +
-  scale_x_discrete("Symptom onset", expand = expansion(0)) +
+  scale_x_discrete(
+    "Symptom onset",
+    expand = expansion(0), labels = as_labeller(tools::toTitleCase)
+  ) +
   scale_y_continuous("Measure") +
   geom_jitter(
     alpha = 0.4,
