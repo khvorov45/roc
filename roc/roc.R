@@ -286,7 +286,7 @@ predvals_res_table <- pred_vals_res %>%
 
 save_data(predvals_res_table, "svnt-predvals")
 
-# Plot the various threshold --------------------------------------------------
+# Plot the various thresholds -------------------------------------------------
 
 special_pointranges <- function(data) {
   list(
@@ -334,5 +334,6 @@ pred_vals_res_plot <- pred_vals_res %>%
   special_pointranges(pred_vals_res)
 
 save_plot(
-  pred_vals_res_plot, "svnt-predvals", width = length(prevs) * 5, height = 25
+  pred_vals_res_plot, "svnt-predvals",
+  width = length(prevs) * 5, height = 25
 )
