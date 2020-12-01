@@ -27,6 +27,7 @@ save_plot <- function(plot, name, ...) {
 # Script ======================================================================
 
 data <- read_data("data") %>%
+  inner_join(read_data("assay"), by = "assay") %>%
   filter(!assay %in% c("svnt-20", "svnt-25")) %>%
   mutate(group_lbl = create_group_lbl(group, symptom_onset_cat))
 
