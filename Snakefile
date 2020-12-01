@@ -28,26 +28,16 @@ rule data_summary:
         ".deps-installed",
         "data-summary/data-summary.R",
         "data/data.csv",
+        "data/mn.csv",
         "data/read_data.R",
     output:
         "data-summary/boxplots.png",
         "data-summary/heatmap-discordant.png",
         "data-summary/heatmap-discordant-deid.png",
+        "data-summary/assay-counts.csv",
+        "data-summary/mn-agreement.csv",
     shell:
         "Rscript data-summary/data-summary.R"
-
-rule data_table:
-    input:
-        ".deps-installed",
-        "data-table/data-table.R",
-        "data/data.csv",
-        "data/mn.csv",
-        "data/read_data.R",
-    output:
-        "data-table/assay-counts.csv",
-        "data-table/mn-agreement.csv",
-    shell:
-        "Rscript data-table/data-table.R"
 
 rule roc:
     input:
@@ -76,7 +66,6 @@ rule zip:
     input:
         rules.data.output,
         rules.data_summary.output,
-        rules.data_table.output,
         rules.roc.output
     output:
         "roc.zip"
