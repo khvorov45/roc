@@ -72,18 +72,22 @@ summ_testchar <- function(point, low, high, success, total) {
   )
 }
 
-plot_testchar <- function(data, ylab, xvar = "assay", xlab = "Assay") {
+plot_testchar <- function(data, ylab, xvar = "assay",
+                          xlab = "Assay") {
   data %>%
-    ggplot(aes(!!rlang::sym(xvar), point, ymin = low, ymax = high)) +
+    ggplot(aes(
+      !!rlang::sym(xvar), point,
+      ymin = low, ymax = high
+    )) +
     ggdark::dark_theme_bw(verbose = FALSE) +
     theme(
       strip.background = element_blank(),
       panel.spacing.x = unit(0, "null"),
       axis.text.x = element_text(angle = 30, hjust = 1)
     ) +
+    scale_color_discrete("Assay") +
     xlab(xlab) +
-    scale_y_continuous(ylab, labels = scales::percent_format(1)) +
-    geom_pointrange()
+    scale_y_continuous(ylab, labels = scales::percent_format(1))
 }
 
 save_plot <- function(plot, name, ...) {
@@ -99,21 +103,14 @@ save_data <- function(data, name) {
   write_csv(data, file.path(roc_dir, paste0(name, ".csv")))
 }
 
-ggarrange_dark <- function(plotlist, ...) {
-  plotlist <- map(
-    plotlist, function(plot) {
-      plot$theme <- ggdark::lighten_theme(plot$theme)
-      plot
-    }
-  )
-  ggdark::lighten_geoms()
-  on.exit(ggdark::darken_geoms())
-  ggpubr::ggarrange(plotlist = plotlist, ...)
+lighten_plot <- function(plot) {
+  plot$theme <- ggdark::lighten_theme(plot$theme)
+  plot
 }
 
 # Script ======================================================================
 
-data <- read_data("data")
+data <- read_data("data") %>% inner_join(read_data("assay"), by = "assay")
 
 # Prevalences to evaluate predictive values at
 prevs <- c(0.001, 0.0011, 0.0032, 0.005, 0.01, 0.05, 0.1, 0.2)
@@ -123,11 +120,11 @@ prevs <- c(0.001, 0.0011, 0.0032, 0.005, 0.01, 0.05, 0.1, 0.2)
 # Work out the sensitivity for each onset category
 sens_onsets <- data %>%
   filter(group == "covid") %>%
-  group_by(assay, symptom_onset_cat) %>%
+  group_by(assay, short, long, symptom_onset_cat) %>%
   summarise(calc_sens(result), .groups = "drop")
 # Averaged sensitivity
 sens_av <- sens_onsets %>%
-  group_by(assay) %>%
+  group_by(assay, short, long) %>%
   summarise(
     symptom_onset_cat = "averaged",
     across(c(low, point, high), mean),
@@ -145,7 +142,7 @@ sens <- bind_rows(sens_onsets, sens_av) %>%
 # Work out the specificity for healthy and non-covid
 spec <- data %>%
   filter(group != "covid") %>%
-  group_by(assay, group) %>%
+  group_by(assay, short, long, group) %>%
   summarise(calc_spec(result), .groups = "drop")
 
 # Predictive values -----------------------------------------------------------
@@ -157,7 +154,7 @@ pred_vals <- sens %>%
       select(assay, spec_low = low, spec_point = point, spec_high = high),
     by = "assay"
   ) %>%
-  group_by(assay, symptom_onset_cat) %>%
+  group_by(assay, short, long, symptom_onset_cat) %>%
   summarise(
     map_dfr(prevs, ~ calc_pop_pred_vals(
       c("point" = point, "low" = low, "high" = high),
@@ -192,36 +189,52 @@ save_data(pred_vals_table, "assay-comp-predvals")
 
 # Plots of results ------------------------------------------------------------
 
-sens_plot <- plot_testchar(sens, "Sensitivity") +
-  facet_wrap(~symptom_onset_cat, nrow = 1)
-save_plot(sens_plot, "assay-comp-sens", width = 20, height = 8)
+sens_plot <- plot_testchar(sens, "Sensitivity", "short") +
+  facet_wrap(
+    ~symptom_onset_cat,
+    nrow = 1, labeller = as_labeller(tools::toTitleCase)
+  ) +
+  geom_pointrange(aes(col = long))
+save_plot(sens_plot, "assay-comp-sens", width = 28, height = 8)
 
-spec_plot <- plot_testchar(spec, "Specificity") +
-  facet_wrap(~group, nrow = 1)
-save_plot(spec_plot, "assay-comp-spec", width = 12, height = 8)
+spec_plot <- plot_testchar(spec, "Specificity", "short") +
+  facet_wrap(~group, nrow = 1, labeller = as_labeller(tools::toTitleCase)) +
+  geom_pointrange(aes(col = long))
+save_plot(spec_plot, "assay-comp-spec", width = 18, height = 8)
 
-common_axis <- coord_cartesian(ylim = c(0, 1))
-
-sens_spec_together <- ggarrange_dark(
-  list(sens_plot + common_axis, spec_plot + common_axis),
-  nrow = 1,
-  widths = c(
-    length(unique(sens$symptom_onset_cat)), length(unique(spec$group))
+# Sens/spec together
+together_mod <- list(
+  coord_cartesian(ylim = c(0, 1)),
+  theme(legend.position = "none")
+)
+common_legend <- ggpubr::get_legend(lighten_plot(sens_plot))
+sens_spec_together <- gridExtra::grid.arrange(
+  lighten_plot(sens_plot) + together_mod,
+  common_legend,
+  lighten_plot(spec_plot) + together_mod,
+  layout_matrix = rbind(
+    c(1, 1),
+    c(2, 3)
   )
 )
-save_plot(sens_spec_together, "sens-spec-together", width = 27, height = 8)
+save_plot(sens_spec_together, "sens-spec-together", width = 25, height = 18)
 
 predvals_plot <- pred_vals %>%
-  plot_testchar("Estimate") +
+  plot_testchar("Estimate", "short") +
   facet_grid(
     symptom_onset_cat + char ~ prev,
-    scales = "free_y", switch = "y",
+    switch = "y",
     labeller = labeller(
       char = toupper,
-      prev = function(prev) glue::glue("Prevalence {as.numeric(prev) * 100}%")
+      prev = function(prev) glue::glue("Prevalence {as.numeric(prev) * 100}%"),
+      symptom_onset_cat = tools::toTitleCase
     )
   ) +
-  theme(strip.placement = "outside", axis.title.y = element_blank())
+  theme(
+    strip.placement = "outside", axis.title.y = element_blank(),
+    legend.position = "bottom"
+  ) +
+  geom_pointrange(aes(col = long))
 save_plot(
   predvals_plot, "assay-comp-predvals",
   width = length(prevs) * 5, height = 25
@@ -330,6 +343,7 @@ sens_res_plot <- plot_testchar(
   facet_wrap(~symptom_onset_cat, nrow = 1) +
   scale_x_continuous(breaks = thresholds) +
   theme(panel.grid.minor.x = element_blank()) +
+  geom_pointrange() +
   special_pointranges(sens_res)
 
 save_plot(sens_res_plot, "svnt-sens", width = 26, height = 10)
@@ -339,6 +353,7 @@ spec_res_plot <- plot_testchar(
 ) +
   facet_wrap(~group, nrow = 1) +
   scale_x_continuous(breaks = thresholds) +
+  geom_pointrange() +
   special_pointranges(spec_res)
 
 save_plot(spec_res_plot, "svnt-spec", width = 15, height = 10)
@@ -350,10 +365,12 @@ pred_vals_res_plot <- pred_vals_res %>%
     scales = "free_y", switch = "y",
     labeller = labeller(
       char = toupper,
-      prev = function(prev) glue::glue("Prevalence {as.numeric(prev) * 100}%")
+      prev = function(prev) glue::glue("Prevalence {as.numeric(prev) * 100}%"),
+      symptom_onset_cat = tools::toTitleCase,
     )
   ) +
   theme(strip.placement = "outside", axis.title.y = element_blank()) +
+  geom_pointrange() +
   special_pointranges(pred_vals_res)
 
 save_plot(
