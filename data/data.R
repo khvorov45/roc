@@ -376,7 +376,7 @@ assays <- tribble(
   "svnt-20", "sVNT-20", "GenScript sVNT (first result c/o 20)",
   "svnt-25", "sVNT-25", "GenScript sVNT (first result c/o 25)",
   "wantai_igm", "W-IgM", "Wantai IgM",
-  "wantai-tot", "W-T", "Wantai total Ab"
+  "wantai_tot", "W-T", "Wantai total Ab"
 )
 
 setdiff(assays$assay, mn_final$assay)
