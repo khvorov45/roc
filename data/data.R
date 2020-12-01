@@ -379,4 +379,10 @@ assays <- tribble(
   "wantai-tot", "W-T", "Wantai total Ab"
 )
 
+setdiff(assays$assay, mn_final$assay)
+setdiff(mn_final$assay, assays$assay)
+
+setdiff(assays$assay, all_data_final$assay)
+setdiff(all_data_final$assay, assays$assay)
+
 save_data(assays, "assay")
