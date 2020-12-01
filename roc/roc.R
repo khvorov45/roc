@@ -99,6 +99,18 @@ save_data <- function(data, name) {
   write_csv(data, file.path(roc_dir, paste0(name, ".csv")))
 }
 
+ggarrange_dark <- function(plotlist, ...) {
+  plotlist <- map(
+    plotlist, function(plot) {
+      plot$theme <- ggdark::lighten_theme(plot$theme)
+      plot
+    }
+  )
+  ggdark::lighten_geoms()
+  on.exit(ggdark::darken_geoms())
+  ggpubr::ggarrange(plotlist = plotlist, ...)
+}
+
 # Script ======================================================================
 
 data <- read_data("data")
@@ -187,6 +199,17 @@ save_plot(sens_plot, "assay-comp-sens", width = 20, height = 8)
 spec_plot <- plot_testchar(spec, "Specificity") +
   facet_wrap(~group, nrow = 1)
 save_plot(spec_plot, "assay-comp-spec", width = 12, height = 8)
+
+common_axis <- coord_cartesian(ylim = c(0, 1))
+
+sens_spec_together <- ggarrange_dark(
+  list(sens_plot + common_axis, spec_plot + common_axis),
+  nrow = 1,
+  widths = c(
+    length(unique(sens$symptom_onset_cat)), length(unique(spec$group))
+  )
+)
+save_plot(sens_spec_together, "sens-spec-together", width = 27, height = 8)
 
 predvals_plot <- pred_vals %>%
   plot_testchar("Estimate") +
