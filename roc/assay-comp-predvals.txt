@@ -1,0 +1,4 @@
+PPV/NPV for the different assays/symptom onsets
+
+svnt-25 PPV point estimate is 100% because everyone negative (in the population
+cohort) tested negative.
