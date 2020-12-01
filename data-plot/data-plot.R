@@ -37,7 +37,7 @@ data <- read_data("data") %>%
     )
   )
 
-boxplots <- data %>%
+data_boxplot <- data %>%
   filter(!is.na(symptom_onset_cat)) %>%
   mutate(
     min_threshold = case_when(
@@ -50,34 +50,42 @@ boxplots <- data %>%
       startsWith(as.character(assay), "wantai") ~ 1.1,
       assay == "svnt" ~ 21, # Need to make it visible
     )
-  ) %>%
-  ggplot(aes(group_lbl, measurement)) +
-  ggdark::dark_theme_bw(verbose = FALSE) +
-  facet_wrap(~long, scales = "free_y") +
-  theme(
-    strip.background = element_blank(),
-    axis.text.x = element_text(angle = 30, hjust = 1)
-  ) +
-  scale_x_discrete(
-    "Symptom onset",
-    expand = expansion(0), labels = as_labeller(tools::toTitleCase)
-  ) +
-  scale_y_continuous("Measure") +
-  geom_jitter(
-    alpha = 0.4,
-    shape = 18,
-    position = position_jitter(0.1, 0, 1)
-  ) +
-  geom_boxplot(
-    col = "blue",
-    fill = NA,
-    outlier.color = NA,
-    outlier.fill = NA
-  ) +
-  geom_rect(
-    aes(xmin = 0.5, xmax = 5.5, ymin = min_threshold, ymax = max_threshold),
-    alpha = 0.01
   )
+
+one_boxplot <- function(data, key) {
+  data %>%
+    ggplot(aes(group_lbl, measurement)) +
+    theme_bw() +
+    facet_wrap(~long, scales = "free_y") +
+    theme(
+      strip.background = element_blank(),
+      axis.text.x = element_text(angle = 30, hjust = 1),
+      axis.title.x = element_blank()
+    ) +
+    scale_x_discrete(
+      expand = expansion(0), labels = as_labeller(tools::toTitleCase)
+    ) +
+    scale_y_continuous(key$measure_name) +
+    geom_jitter(
+      alpha = 0.4,
+      shape = 18,
+      position = position_jitter(0.1, 0, 1)
+    ) +
+    geom_boxplot(
+      col = "blue",
+      fill = NA,
+      outlier.color = NA,
+      outlier.fill = NA
+    ) +
+    geom_rect(
+      aes(xmin = 0.5, xmax = 5.5, ymin = min_threshold, ymax = max_threshold),
+      alpha = 0.01
+    )
+}
+boxplots <- data_boxplot %>%
+  group_by(assay, measure_name) %>%
+  group_map(one_boxplot) %>%
+  ggpubr::ggarrange(plotlist = ., nrow = 2, ncol = 3)
 
 save_plot(boxplots, "boxplots", width = 20, height = 15)
 
