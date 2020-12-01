@@ -238,15 +238,15 @@ save_data(assay_counts, "assay-counts")
 
 # MN validation ---------------------------------------------------------------
 
-mn <- read_data("mn")
+mn <- read_data("mn") %>% inner_join(read_data("assay"), by = "assay")
 
 mn_summ_indiv_groups <- mn %>%
-  group_by(assay, symptom_onset_cat, group) %>%
+  group_by(assay, short, long, symptom_onset_cat, group) %>%
   summarise(summarise_binary(result == mn), .groups = "drop")
 
 mn_summ_onset_averaged <- mn_summ_indiv_groups %>%
   filter(group == "covid") %>%
-  group_by(group, assay) %>%
+  group_by(group, assay, short, long) %>%
   summarise(
     symptom_onset_cat = factor("onset-averaged"),
     across(c(prop, low, high), mean),
