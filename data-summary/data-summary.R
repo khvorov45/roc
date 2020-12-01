@@ -254,10 +254,10 @@ mn_summ_onset_averaged <- mn_summ_indiv_groups %>%
     .groups = "drop"
   )
 
-mn_summ <- bind_rows(mn_summ_indiv_groups, mn_summ_onset_averaged)
+mn_summ <- bind_rows(mn_summ_indiv_groups, mn_summ_onset_averaged) %>%
+  mutate(group_lbl = merge_groups(symptom_onset_cat, group))
 
 mn_summ %>%
-  mutate(group_lbl = merge_groups(symptom_onset_cat, group)) %>%
   select(assay, group_lbl, summary) %>%
   pivot_wider(names_from = "assay", values_from = "summary") %>%
   arrange(group_lbl) %>%
