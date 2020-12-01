@@ -364,3 +364,19 @@ mn_final <- mn_all %>%
   select(id, group = group_fixed, mn, symptom_onset_cat, assay, result)
 
 save_data(mn_final, "mn")
+
+# Assay name table ------------------------------------------------------------
+
+assays <- tribble(
+  ~assay, ~short, ~long,
+  "euro_iga", "E-S1-IgA", "Euroimmun S1 IgA",
+  "euro_igg", "E-S1-IgG", "Euroimmun S1 IgG",
+  "euro_ncp", "E-NCP-IgG", "Euroimmun NCP IgG",
+  "svnt", "sVNT", "GenScript sVNT (repeats for 18-22)",
+  "svnt-20", "sVNT-20", "GenScript sVNT (first result c/o 20)",
+  "svnt-25", "sVNT-25", "GenScript sVNT (first result c/o 25)",
+  "wantai_igm", "W-IgM", "Wantai IgM",
+  "wantai-tot", "W-T", "Wantai total Ab"
+)
+
+save_data(assays, "assay")
