@@ -47,7 +47,7 @@ boxplots <- data %>%
   ) %>%
   ggplot(aes(group_lbl, measurement)) +
   ggdark::dark_theme_bw(verbose = FALSE) +
-  facet_wrap(~assay, scales = "free_y") +
+  facet_wrap(~long, scales = "free_y") +
   theme(
     strip.background = element_blank(),
     axis.text.x = element_text(angle = 30, hjust = 1)
