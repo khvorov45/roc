@@ -368,7 +368,7 @@ save_data(mn_final, "mn")
 # Assay name table ------------------------------------------------------------
 
 assays <- tribble(
-  ~assay, ~short, ~long, ~measure,
+  ~assay, ~short, ~long, ~measure_name,
   "euro_iga", "E-S1-IgA", "Euroimmun S1 IgA", "OD/CO",
   "euro_igg", "E-S1-IgG", "Euroimmun S1 IgG", "OD/CO",
   "euro_ncp", "E-NCP-IgG", "Euroimmun NCP IgG", "OD/CO",
