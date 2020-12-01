@@ -19,6 +19,7 @@ rule data:
     output:
         "data/data.csv",
         "data/mn.csv",
+        "data/assay.csv",
     shell:
         "Rscript data/data.R"
 
@@ -67,6 +68,7 @@ rule roc:
         "roc/svnt-sens.csv",
         "roc/svnt-spec.csv",
         "roc/svnt-predvals.csv",
+        "roc/sens-spec-together.png",
     shell:
         "Rscript roc/roc.R"
 
