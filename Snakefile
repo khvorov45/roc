@@ -23,18 +23,18 @@ rule data:
     shell:
         "Rscript data/data.R"
 
-rule data_plot:
+rule data_summary:
     input:
         ".deps-installed",
-        "data-plot/data-plot.R",
+        "data-summary/data-summary.R",
         "data/data.csv",
         "data/read_data.R",
     output:
-        "data-plot/boxplots.png",
-        "data-plot/heatmap-discordant.png",
-        "data-plot/heatmap-discordant-deid.png",
+        "data-summary/boxplots.png",
+        "data-summary/heatmap-discordant.png",
+        "data-summary/heatmap-discordant-deid.png",
     shell:
-        "Rscript data-plot/data-plot.R"
+        "Rscript data-summary/data-summary.R"
 
 rule data_table:
     input:
@@ -75,7 +75,7 @@ rule roc:
 rule zip:
     input:
         rules.data.output,
-        rules.data_plot.output,
+        rules.data_summary.output,
         rules.data_table.output,
         rules.roc.output
     output:
