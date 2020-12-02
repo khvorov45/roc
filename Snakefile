@@ -29,6 +29,7 @@ rule data_summary:
         "data-summary/data-summary.R",
         "data/data.csv",
         "data/mn.csv",
+        "data/assay.csv"
         "data/read_data.R",
     output:
         "data-summary/boxplots.png",
@@ -45,6 +46,7 @@ rule roc:
         ".deps-installed",
         "roc/roc.R",
         "data/data.csv",
+        "data/assay.csv",
         "data/read_data.R",
     output:
         "roc/assay-comp-sens.png",
