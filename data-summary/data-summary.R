@@ -268,7 +268,8 @@ mn_summ_plot <- mn_summ %>%
   ggdark::dark_theme_bw(verbose = FALSE) +
   theme(
     panel.border = element_blank(),
-    axis.ticks = element_blank()
+    axis.ticks = element_blank(),
+    axis.title.y = element_blank(),
   ) +
   scale_fill_viridis_c("Agreement", labels = scales::percent_format()) +
   scale_x_discrete("Assay") +
