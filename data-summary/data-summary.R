@@ -275,6 +275,6 @@ mn_summ_plot <- mn_summ %>%
   scale_x_discrete("Assay") +
   scale_y_discrete("Group", labels = as_labeller(tools::toTitleCase)) +
   geom_tile(aes(fill = prop)) +
-  geom_text(aes(label = paste0(round(prop * 100), "%")))
+  shadowtext::geom_shadowtext(aes(label = paste0(round(prop * 100), "%")))
 
 save_plot(mn_summ_plot, "mn-agreement", width = 18, height = 10)
