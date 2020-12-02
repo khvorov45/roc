@@ -213,8 +213,8 @@ sens_spec_together <- gridExtra::grid.arrange(
   common_legend,
   lighten_plot(spec_plot) + together_mod,
   layout_matrix = rbind(
-    c(1, 1),
-    c(2, 3)
+    rep(1, 13),
+    c(rep(2, 6), rep(3, 7)) # Width-specific alignment
   )
 )
 save_plot(sens_spec_together, "sens-spec-together", width = 25, height = 18)
