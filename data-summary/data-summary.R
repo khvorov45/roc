@@ -148,19 +148,21 @@ counts <- data_heat %>%
 
 gen_heatmap <- function(data, id_var) {
   data_heat %>%
-    ggplot(aes(assay, !!rlang::sym(id_var))) +
+    mutate(long_lbl = str_replace(long, " ", "\n")) %>%
+    ggplot(aes(long_lbl, !!rlang::sym(id_var))) +
     theme_bw() +
     theme(
       legend.position = "bottom",
     ) +
     scale_fill_manual("Test result", values = c("#88b1ff", "#ffb380")) +
-    scale_y_discrete("Sample id", expand = expansion()) +
+    scale_y_discrete("Sample ID", expand = expansion()) +
     scale_x_discrete("Assay", expand = expansion()) +
     geom_tile(aes(fill = result)) +
     geom_text(aes(label = signif(measurement, 2)), col = "black") +
     facet_wrap(
       ~group_lbl,
-      ncol = 1, scales = "free_y", strip.position = "right"
+      ncol = 1, scales = "free_y", strip.position = "right",
+      labeller = as_labeller(tools::toTitleCase)
     )
 }
 
