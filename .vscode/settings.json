@@ -1,8 +1,4 @@
 {
-    "cSpell.words": [
-        "Scherer",
-        "aucs",
-        "predvals",
-        "vals"
-    ]
+  "cSpell.words": ["Scherer", "aucs", "predvals", "vals"],
+  "editor.acceptSuggestionOnEnter": "off"
 }
