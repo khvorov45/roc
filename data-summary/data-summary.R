@@ -16,6 +16,11 @@ create_group_lbl <- function(group, symptom_onset_cat) {
 save_plot <- function(plot, name, ...) {
   ggdark::ggsave_dark(
     file.path("data-summary", paste0(name, ".png")),
+    units = "cm", dpi = 300,
+    ...
+  )
+  ggdark::ggsave_dark(
+    file.path("data-summary", paste0(name, ".pdf")),
     units = "cm",
     ...
   )
@@ -174,7 +179,17 @@ heatmap_deid <- gen_heatmap(data_heat, "id_deid")
 save_heatmap <- function(plot, name) {
   png(
     file.path("data-summary", paste0(name, ".png")),
-    width = 20, height = 30, units = "cm", res = 150
+    width = 20, height = 30, units = "cm", res = 300
+  )
+  gt <- ggplot_gtable(ggplot_build(plot))
+  for (i in seq_along(counts$n)) {
+    gt$heights[7 + (i - 1) * 4] <- unit(counts$n[[i]], "null")
+  }
+  grid::grid.draw(gt)
+  dev.off()
+  pdf(
+    file.path("data-summary", paste0(name, ".pdf")),
+    width = 7, height = 12
   )
   gt <- ggplot_gtable(ggplot_build(plot))
   for (i in seq_along(counts$n)) {

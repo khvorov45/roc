@@ -94,6 +94,12 @@ save_plot <- function(plot, name, ...) {
   ggdark::ggsave_dark(
     file.path(roc_dir, paste0(name, ".png")),
     plot,
+    units = "cm", dpi = 300,
+    ...
+  )
+  ggdark::ggsave_dark(
+    file.path(roc_dir, paste0(name, ".pdf")),
+    plot,
     units = "cm",
     ...
   )
