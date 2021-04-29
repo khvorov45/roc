@@ -295,3 +295,23 @@ mn_summ_plot <- mn_summ %>%
   shadowtext::geom_shadowtext(aes(label = paste0(round(prop * 100), "%")))
 
 save_plot(mn_summ_plot, "mn-agreement", width = 18, height = 10)
+
+# Wide table with data and MN =================================================
+
+just_mn <- mn %>%
+  select(id, symptom_onset_cat, mn) %>%
+  distinct()
+
+just_mn %>%
+  group_by(id, symptom_onset_cat) %>%
+  filter(n() > 1)
+
+assays_with_mn_results <- data %>%
+  select(-short, -long, -measure_name, -group_lbl) %>%
+  rename(assay_result = result, assay_measurement = measurement) %>%
+  left_join(
+    just_mn,
+    c("id", "symptom_onset_cat")
+  )
+
+save_data(assays_with_mn_results, "assays-with-mn-results")
